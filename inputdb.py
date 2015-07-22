@@ -6,7 +6,7 @@ import ConfigParser
 import argparse
 import common
 
-def read_cfg_file(cfgfile, inpproc = None):
+def read_cfg_file(cfgfile, inpproc = None, bmktest2 = None):
     unserialize_input = None
 
     if inpproc:
@@ -28,7 +28,11 @@ def read_cfg_file(cfgfile, inpproc = None):
         basepath = x.get("bmktest2", "basepath")
 
         for s in x.sections():
-            if s == "bmktest2": continue
+            if s == "bmktest2": 
+                if bmktest2 is not None:
+                    bmktest2.update(x.items(s))
+
+                continue
 
             e = dict(x.items(s))
             if unserialize_input:

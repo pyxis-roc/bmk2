@@ -6,6 +6,7 @@ import inputdb
 import bispec
 import subprocess
 import tempfile
+import inputprops
 
 if not hasattr(subprocess, "check_output"):
     print >>sys.stderr, "%s: Need python 2.7" % (sys.argv[0],)
@@ -69,7 +70,7 @@ class Run(object):
         self.env = env
         self.binary = binary
         self.args = args
-        self.run_env = os.environ
+        self.run_env = os.environ.copy()
         self.run_env.update(self.env)
         self.cmd_line_c = "not-run-yet"
         self.bin_id = self.binary.replace("/", "_").replace(".", "")
@@ -122,11 +123,13 @@ class Run(object):
 
 
 class RunSpec(object):
-    def __init__(self):
+    def __init__(self, input_name):
+        self.input_name = input_name
         self.binary = None
         self.args = []
         self.env = {}
         self.runs = []
+        self.checker = None
 
     def set_binary(self, cwd, binary, bid):
         self.cwd = cwd
@@ -169,6 +172,10 @@ class RunSpec(object):
                 if not os.path.isfile(a):
                     print >>sys.stderr, "Input file %s is not a file [bin %s]" % (a, self.bid)
                     return False
+
+        if not self.checker:
+            print >>sys.stderr, "No checker specified for input %s [bin %s] " % (self.input_name, self.bid)
+            return False
 
         return True
 
@@ -214,6 +221,7 @@ class DiffChecker(Checker):
 def find_helper_files(d):
     specfiles = glob.glob(os.path.join(d, "*.bispec"))
     dbfiles = glob.glob(os.path.join(d, "*.inputdb"))
+    propfiles = glob.glob(os.path.join(d, "*.inputprops"))
 
     if len(specfiles) != 1:
         return None
@@ -221,7 +229,12 @@ def find_helper_files(d):
     if len(dbfiles) != 1:
         return None
 
-    return specfiles[0], dbfiles[0]
+    if len(propfiles) > 1:
+        return None
+    elif len(propfiles) == 0:
+        propfiles[0] = None
+
+    return {"spec": specfiles[0], "db": dbfiles[0], "prop": propfiles[0]}
 
 def load_binary_specs(f):
     g = load_py_module(f)
@@ -244,9 +257,17 @@ class Loader(object):
             print >>sys.stderr, "Unable to find spec files (*.bispec) or inputdb files (*.inputdb) [or multiple exist] in", self.metadir
             return False
 
-        self.inputdb = inputdb.read_cfg_file(x[1], self.inpproc)
-        self.bs = bispec.read_bin_input_spec(x[0])
-        self.bs.set_input_db(self.inputdb)
+        bt = {}
+        self.inputdb = inputdb.read_cfg_file(x['db'], self.inpproc, bt)
+
+        if x['prop']:
+            self.inputprops = inputprops.read_prop_file(x['prop'], bt)
+            inputprops.apply_props(self.inputdb, self.inputprops)
+        else:
+            self.inputprops = None
+
+        self.bs = bispec.read_bin_input_spec(x['spec'])
+        self.bs.set_input_db(self.inputdb)            
 
         return True
 

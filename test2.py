@@ -26,6 +26,7 @@ if l.initialize():
             if all(checks):
                 for rs in rspecs:
                     x = rs.run()
+                    print str(x)
                     print x.stdout
                     print x.retval
                     if rs.checker.check(x):
