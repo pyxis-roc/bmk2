@@ -32,7 +32,7 @@ def read_cfg_file(cfgfile, inpproc = None):
 
             e = dict(x.items(s))
             if unserialize_input:
-                e = unserialize_input(e)
+                e = unserialize_input(e, basepath)
 
             e['file'] = os.path.join(basepath, e['file'])
 

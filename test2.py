@@ -16,15 +16,20 @@ args = p.parse_args()
 if not os.path.exists(args.binspec):
     print >>sys.stderr, "Unable to find %s" % (args.binspec,)
 
-
 l = bmk2.Loader(args.metadir, args.inpproc)
 if l.initialize():
     sys.path.append(args.metadir)
     if l.load_binaries(args.binspec):
         if l.associate_inputs():
-            checks = [rs.check() for rs in l.get_run_specs()]
+            rspecs = l.get_run_specs()
+            checks = [rs.check() for rs in rspecs]
             if all(checks):
-                print "READY-TO-GO"
+                for rs in rspecs:
+                    x = rs.run()
+                    print x.stdout
+                    print x.retval
+                    if rs.checker.check(x):
+                        print "PASS"
             else:
                 print "Some checks failed. See previous error messages for information."
 
