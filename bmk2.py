@@ -64,8 +64,19 @@ class Binary(object):
         raise NotImplementedError
 
 class Input(object):
+    def __init__(self, props):
+        self.props = Properties()
+
+        for k, v in props.iteritems():
+            setattr(self.props, k, v)
+
+        self.name = self.props.name
+
+    def hasprop(self, prop):
+        return hasattr(self.props, prop)
+
     def get_id(self):
-        raise NotImplementedError
+        return self.name
 
     def get_file(self):
         raise NotImplementedError
@@ -134,18 +145,23 @@ class Run(object):
 
 
 class RunSpec(object):
-    def __init__(self, input_name):
-        self.input_name = input_name
+    def __init__(self, bmk_binary, bmk_input):
+        self.bmk_binary = bmk_binary
+        self.bmk_input = bmk_input
+
+        self.bid = self.bmk_binary.get_id()
+        self.input_name = bmk_input.get_id()
+
         self.binary = None
         self.args = []
         self.env = {}
         self.runs = []
         self.checker = None
 
-    def set_binary(self, cwd, binary, bid):
+    def set_binary(self, cwd, binary):
         self.cwd = cwd
         self.binary = os.path.join(cwd, binary)
-        self.bid = bid
+        self.bid = self.bmk_binary.get_id()
 
     def set_checker(self, checker):
         self.checker = checker
@@ -261,19 +277,39 @@ class Loader(object):
         else:
             self.inputprops = None
 
+        self.inputdb = [Input(i) for i in self.inputdb]
         self.bs = bispec.read_bin_input_spec(self.config.get_file(FT_BISPEC))
         self.bs.set_input_db(self.inputdb)
 
         return True
 
-    def load_binaries(self, binspec):
+    def split_binputs(self, binputs):
+        inpnames = set([i.get_id() for i in self.inputdb])
+
+        bins = set()
+        inputs = set()
+
+        if binputs:
+            for i in binputs:
+                if i in inpnames:
+                    inputs.add(i)
+                else:
+                    bins.add(i)
+
+        return inputs, bins            
+
+    def load_binaries(self, binspec, binputs = None):
         d = os.path.dirname(binspec)
         binaries = load_binary_specs(binspec)
         if binaries:
             for b in binaries:
                 if b.get_id() in self.binaries:
-                    log.error("Duplicate binary id %s in %s" % (b.get_id(), f))
+                    log.error("Duplicate binary id %s in %s" % (b.get_id(), binspec))
                     return False
+
+                if binputs and b.get_id() not in binputs:
+                    log.debug("Ignoring binary id %s in %s, not in sel_inputs" % (b.get_id(), binspec))
+                    continue
 
                 self.binaries[b.get_id()] = b
                 b.props._cwd = d
@@ -281,13 +317,17 @@ class Loader(object):
             return True
         
         if len(binaries) == 0:
-            log.error("BINARIES is empty in " + f)
+            log.error("BINARIES is empty in " + binspec)
 
         return False
 
-    def associate_inputs(self):
+    def associate_inputs(self, binputs = None):
+        if len(self.binaries) == 0:
+            log.error("No binaries")
+            return False
+
         for bid, b in self.binaries.iteritems():
-            i = self.bs.get_inputs(b)
+            i = self.bs.get_inputs(b, binputs)
             if len(i) == 0:
                 log.error("No inputs matched for binary " + bid)
                 return False

@@ -2,6 +2,9 @@
 
 import sys
 import re
+import logging
+
+log = logging.getLogger(__name__)
 
 class BinInputSpecV1(object):
     def __init__(self):
@@ -10,13 +13,13 @@ class BinInputSpecV1(object):
 
     def set_input_db(self, inputs):
         for i in inputs:
-            nm = i['name']
-            if nm  not in self.inputs:
+            nm = i.get_id()
+            if nm not in self.inputs:
                 self.inputs[nm] = {}
 
-            self.inputs[nm][i['file']] = i
+            self.inputs[nm][i.props.file] = i
 
-    def get_inputs(self, binary):
+    def get_inputs(self, binary, sel_inputs = None):
         inpnames = set()
         binid = binary.get_id()
         
@@ -26,6 +29,10 @@ class BinInputSpecV1(object):
 
         out = []
         for n in inpnames:
+            if sel_inputs and n not in sel_inputs:
+                log.debug("Ignoring input '%s' for '%s', not in sel_inputs" % (n, binid))
+                continue
+
             assert n in self.inputs, "Input named %s not found" % (n,)
             out += self.inputs[n].values()
 
