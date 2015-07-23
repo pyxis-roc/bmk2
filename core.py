@@ -152,12 +152,13 @@ class BasicRunSpec(object):
         self.args = []
         self.env = {}
         self.runs = []
+        self.in_path = False
 
     def get_id(self):
         return "%s/%s" % (self.bid, self.input_name)
 
     def set_binary(self, cwd, binary, in_path = False):
-        self.cwd = cwd
+        self.cwd = cwd # TODO: does this do anything?
         self.binary = os.path.join(cwd, binary)
         self.in_path = in_path
 
@@ -182,6 +183,10 @@ class BasicRunSpec(object):
         return out
 
     def check(self):
+        if not self.binary:
+            log.error("No binary specified [bin %s]" % (self.bid,))
+            return False
+
         # make sure binary exists
         if not self.in_path and not os.path.exists(self.binary):
             log.error("Binary %s not found [bin %s]" % (self.binary, self.bid))

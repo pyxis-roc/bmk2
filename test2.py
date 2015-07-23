@@ -65,6 +65,8 @@ def do_perf(args, rspecs):
                     log.log(FAIL_LEVEL, "%s: perf extraction failed: %s" % (rsid, x))
                     if args.fail_fast:
                         sys.exit(1)
+                    else:
+                        break
 
                 # TODO: delay this until we have all repeats?
                 log.log(PERF_LEVEL, "%s %s: %s %s" % (rsid, runid, run, p['time_ns']))

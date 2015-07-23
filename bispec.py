@@ -32,9 +32,12 @@ class BinInputSpecV1(object):
             if sel_inputs and n not in sel_inputs:
                 log.debug("Ignoring input '%s' for '%s', not in sel_inputs" % (n, binid))
                 continue
+            
+            if n in self.inputs:
+                out += self.inputs[n].values()
+            else:
+                log.info("Input named '%s' not found in inputdb" % (n,))
 
-            assert n in self.inputs, "Input named %s not found" % (n,)
-            out += self.inputs[n].values()
 
         return out
 

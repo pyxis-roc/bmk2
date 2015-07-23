@@ -46,6 +46,7 @@ class PerfRE(object):
             m = self.re.search(run.stderr)
 
         if not m:
+            log.debug("No match for perf re in stdout or stderr")
             return None
 
         gd = m.groupdict()
