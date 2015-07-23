@@ -4,6 +4,10 @@ import sys
 import argparse
 import os
 import bmk2
+import logging
+
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 p = argparse.ArgumentParser("Run tests")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to look for bispec and inputdb files", default=".")

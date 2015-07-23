@@ -1,5 +1,6 @@
 import sys
 from common import *
+from config import *
 import glob
 import os
 import inputdb
@@ -7,6 +8,9 @@ import bispec
 import subprocess
 import tempfile
 import inputprops
+import logging
+
+log = logging.getLogger(__name__)
 
 if not hasattr(subprocess, "check_output"):
     print >>sys.stderr, "%s: Need python 2.7" % (sys.argv[0],)
@@ -33,11 +37,13 @@ def run_command(cmd, stdout = True, stderr = True, env = None):
             output = subprocess.check_output(cmd, stderr=stderrh, env = env)
             rv = 0
         except subprocess.CalledProcessError as e:
-            print >>sys.stderr, "Execute failed: (%d) " % (e.returncode,) + " ".join(cmd)
+            #print >>sys.stderr, "Execute failed (%d): " % (e.returncode,) + " ".join(cmd)
+            log.error("Execute failed (%d): " % (e.returncode,) + " ".join(cmd))
             output = e.output
             rv = e.returncode
         except OSError as e:
-            print >>sys.stderr, "Execute failed: (%d: %s) "  % (e.errno, e.strerror) + " ".join(cmd)
+            #print >>sys.stderr, "Execute failed: (%d: %s) "  % (e.errno, e.strerror) + " ".join(cmd)
+            log.error("Execute failed (OSError %d '%s'): "  % (e.errno, e.strerror) + " ".join(cmd))
             output = e.strerror
             rv = e.errno
     else:
@@ -91,13 +97,18 @@ class Run(object):
 
             if aty == AT_TEMPORARY_OUTPUT:
                 th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id)
-
+                log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[a], a))
                 a = self.tmpfiles[a]
+
+
 
             cmdline.append(a)
             
         self.cmd_line = cmdline
         self.cmd_line_c = " ".join(self.cmd_line)
+
+        log.info("Running %s" % (str(self)))
+
         self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=self.run_env)
         self.run_ok = self.retval == 0
 
@@ -155,26 +166,26 @@ class RunSpec(object):
         # make sure binary exists
         if not os.path.exists(self.binary):
             # must provide full-path even if in PATH ...
-            print >>sys.stderr, "Binary %s not found [bin %s]" % (self.binary, self.bid)
+            log.error("Binary %s not found [bin %s]" % (self.binary, self.bid))
             return False
             
         if not os.path.isfile(self.binary):
-            print >>sys.stderr, "Binary %s is not a file [bin %s]" % (self.binary, self.bid)
+            log.error("Binary %s is not a file [bin %s]" % (self.binary, self.bid))
             return False
             
         for a, aty in self.args:
             if aty in (AT_INPUT_FILE, AT_INPUT_FILE_IMPLICIT):
                 if not os.path.exists(a):
-                    print >>sys.stderr, "Input file %s does not exist [bin %s]" % (a, self.bid)
+                    log.error("Input file %s does not exist [bin %s]" % (a, self.bid))
                     return False
 
                 # TODO: add AT_DIR ...
                 if not os.path.isfile(a):
-                    print >>sys.stderr, "Input file %s is not a file [bin %s]" % (a, self.bid)
+                    log.error("Input file %s is not a file [bin %s]" % (a, self.bid))
                     return False
 
         if not self.checker:
-            print >>sys.stderr, "No checker specified for input %s [bin %s] " % (self.input_name, self.bid)
+            log.error("No checker specified for input %s [bin %s] " % (self.input_name, self.bid))
             return False
 
         return True
@@ -206,35 +217,18 @@ class DiffChecker(Checker):
 
     def check(self, run):
         if not run.run_ok:
-            print >>sys.stderr, "Cannot check failed run"
+            log.error("Cannot check failed run")
             return False
 
         args = run.get_tmp_files([self.file1, self.gold])
         
         x = Run({}, "diff", [(x, AT_OPAQUE) for x in ["-q"] + args])
         if not x.run():
-            print >>sys.stderr, "diff -u '%s' '%s'" % tuple(args)
+            log.info("diff -u '%s' '%s'" % tuple(args))
             return False
 
         return True
 
-def find_helper_files(d):
-    specfiles = glob.glob(os.path.join(d, "*.bispec"))
-    dbfiles = glob.glob(os.path.join(d, "*.inputdb"))
-    propfiles = glob.glob(os.path.join(d, "*.inputprops"))
-
-    if len(specfiles) != 1:
-        return None
-
-    if len(dbfiles) != 1:
-        return None
-
-    if len(propfiles) > 1:
-        return None
-    elif len(propfiles) == 0:
-        propfiles[0] = None
-
-    return {"spec": specfiles[0], "db": dbfiles[0], "prop": propfiles[0]}
 
 def load_binary_specs(f):
     g = load_py_module(f)
@@ -242,32 +236,33 @@ def load_binary_specs(f):
     if 'BINARIES' in g:
         return g['BINARIES']
     else:
-        print >>sys.stderr, "No BINARIES in ", f
+        logging.error("No BINARIES in " + f)
+        return None
         
 class Loader(object):
     def __init__(self, metadir, inpproc):
-        self.metadir = metadir
-        self.inpproc = inpproc
+        self.config = Config(metadir, inpproc)        
         self.binaries = {}
         self.bin_inputs = {}
 
     def initialize(self):
-        x =  find_helper_files(self.metadir)
-        if not x:
-            print >>sys.stderr, "Unable to find spec files (*.bispec) or inputdb files (*.inputdb) [or multiple exist] in", self.metadir
+        if not self.config.load_config():
+            return False
+        
+        if not self.config.auto_set_files():
             return False
 
         bt = {}
-        self.inputdb = inputdb.read_cfg_file(x['db'], self.inpproc, bt)
+        self.inputdb = inputdb.read_cfg_file(self.config.get_file(FT_INPUTDB), self.config.get_file(FT_INPUTPROC), bt)
 
-        if x['prop']:
-            self.inputprops = inputprops.read_prop_file(x['prop'], bt)
+        if self.config.get_file(FT_INPUTPROPS) is not None:
+            self.inputprops = inputprops.read_prop_file(self.config.get_file(FT_INPUTPROPS), bt)
             inputprops.apply_props(self.inputdb, self.inputprops)
         else:
             self.inputprops = None
 
-        self.bs = bispec.read_bin_input_spec(x['spec'])
-        self.bs.set_input_db(self.inputdb)            
+        self.bs = bispec.read_bin_input_spec(self.config.get_file(FT_BISPEC))
+        self.bs.set_input_db(self.inputdb)
 
         return True
 
@@ -277,7 +272,7 @@ class Loader(object):
         if binaries:
             for b in binaries:
                 if b.get_id() in self.binaries:
-                    print >>sys.stderr, "DUPLICATE %s binary in %s" % (b.get_id(), f)
+                    log.error("Duplicate binary id %s in %s" % (b.get_id(), f))
                     return False
 
                 self.binaries[b.get_id()] = b
@@ -286,7 +281,7 @@ class Loader(object):
             return True
         
         if len(binaries) == 0:
-            print >>sys.stderr, "BINARIES is empty in ", f
+            log.error("BINARIES is empty in " + f)
 
         return False
 
@@ -294,12 +289,12 @@ class Loader(object):
         for bid, b in self.binaries.iteritems():
             i = self.bs.get_inputs(b)
             if len(i) == 0:
-                print >>sys.stderr, "No inputs matched for binary", bid
+                log.error("No inputs matched for binary " + bid)
                 return False
 
             i = b.filter_inputs(i)
             if len(i) == 0:
-                print >>sys.stderr, "Filtering discarded all inputs for binary", bid
+                log.error("Filtering discarded all inputs for binary" + bid)
                 return False
             
             self.bin_inputs[bid] = i
