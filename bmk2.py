@@ -157,6 +157,9 @@ class RunSpec(object):
         self.env = {}
         self.runs = []
         self.checker = None
+    
+    def get_id(self):
+        return "%s/%s" % (self.bid, self.input_name)
 
     def set_binary(self, cwd, binary):
         self.cwd = cwd
@@ -178,6 +181,14 @@ class RunSpec(object):
     def set_arg(self, arg, arg_type = AT_OPAQUE):
         self.args.append((arg, arg_type))
 
+    def get_input_files(self):
+        out = []
+        for a, aty in self.args:
+            if aty in (AT_INPUT_FILE, AT_INPUT_FILE_IMPLICIT):
+                out.append(a)
+
+        return out
+
     def check(self):
         # make sure binary exists
         if not os.path.exists(self.binary):
@@ -189,20 +200,29 @@ class RunSpec(object):
             log.error("Binary %s is not a file [bin %s]" % (self.binary, self.bid))
             return False
             
-        for a, aty in self.args:
-            if aty in (AT_INPUT_FILE, AT_INPUT_FILE_IMPLICIT):
-                if not os.path.exists(a):
-                    log.error("Input file %s does not exist [bin %s]" % (a, self.bid))
-                    return False
-
-                # TODO: add AT_DIR ...
-                if not os.path.isfile(a):
-                    log.error("Input file %s is not a file [bin %s]" % (a, self.bid))
-                    return False
-
         if not self.checker:
-            log.error("No checker specified for input %s [bin %s] " % (self.input_name, self.bid))
+            log.error("No checker specified for input  %s [bin %s] " % (self.input_name, self.bid))
             return False
+
+        for a in self.get_input_files():
+            if not os.path.exists(a):
+                log.error("Input file '%s' does not exist [bin %s]" % (a, self.bid))
+                return False
+
+            # TODO: add AT_DIR ...
+            if not os.path.isfile(a):
+                log.error("Input file '%s' is not a file [bin %s]" % (a, self.bid))
+                return False
+
+        for a in self.checker.get_input_files():
+            if not os.path.exists(a):
+                log.error("Input file '%s' for checker does not exist [bin %s]" % (a, self.bid))
+                return False
+
+            # TODO: add AT_DIR ...
+            if not os.path.isfile(a):
+                log.error("Input file '%s' for checker is not a file [bin %s]" % (a, self.bid))
+                return False
 
         return True
 
@@ -222,6 +242,9 @@ class Checker(object):
     def check(self, run):
         pass
 
+    def get_input_files(self):
+        return []
+
 class PassChecker(Checker):
     def check(self, run):
         return run.run_ok
@@ -230,6 +253,9 @@ class DiffChecker(Checker):
     def __init__(self, file1, gold):
         self.file1 = file1
         self.gold = gold
+
+    def get_input_files(self):
+        return [self.gold]
 
     def check(self, run):
         if not run.run_ok:
@@ -260,6 +286,7 @@ class Loader(object):
         self.config = Config(metadir, inpproc)        
         self.binaries = {}
         self.bin_inputs = {}
+        self.inp_filtered = False
 
     def initialize(self):
         if not self.config.load_config():
@@ -296,6 +323,7 @@ class Loader(object):
                 else:
                     bins.add(i)
 
+        self.inp_filtered = len(inputs) > 0
         return inputs, bins            
 
     def load_binaries(self, binspec, binputs = None):
@@ -329,13 +357,21 @@ class Loader(object):
         for bid, b in self.binaries.iteritems():
             i = self.bs.get_inputs(b, binputs)
             if len(i) == 0:
-                log.error("No inputs matched for binary " + bid)
-                return False
+                if not self.inp_filtered:
+                    log.error("No inputs matched for binary " + bid)
+                    return False
+                else:
+                    log.warning("No inputs matched for binary " + bid)
+                    continue
 
             i = b.filter_inputs(i)
             if len(i) == 0:
-                log.error("Filtering discarded all inputs for binary" + bid)
-                return False
+                if not self.inp_filtered:
+                    log.error("Filtering discarded all inputs for binary " + bid)
+                    return False
+                else:
+                    log.warning("Filtering discarded all inputs for binary " + bid)
+                    continue
             
             self.bin_inputs[bid] = i
 
