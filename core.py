@@ -14,6 +14,7 @@ AT_INPUT_FILE = 1
 AT_OUTPUT_FILE = 2
 AT_TEMPORARY_OUTPUT = 3
 AT_INPUT_FILE_IMPLICIT = 4
+AT_TEMPORARY_INPUT = 5
 
 def run_command(cmd, stdout = True, stderr = True, env = None):
     if stderr:
@@ -49,6 +50,9 @@ class Properties(object):
         for y in vars(self):
             print y, getattr(self, y)
 
+    def __str__(self):
+        return ", ".join(["%s=%s" % (x, getattr(self, x)) for x in vars(self)])
+
 class Binary(object):
     def get_id(self):
         raise NotImplementedError
@@ -74,6 +78,10 @@ class Input(object):
     def get_file(self):
         raise NotImplementedError
 
+    def __str__(self):
+        return "%s(%s)" % (self.name, str(self.props))
+
+    __repr__ = __str__
 
 class Run(object):
     def __init__(self, env, binary, args):
@@ -93,7 +101,7 @@ class Run(object):
         self.run_ok = False
         self.check_ok = False
 
-    def run(self):
+    def run(self, inherit_tmpfiles = None):
         cmdline = [self.binary]
 
         for a, aty in self.args:
@@ -104,8 +112,8 @@ class Run(object):
                 th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id)
                 log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[a], a))
                 a = self.tmpfiles[a]
-
-
+            elif aty == AT_TEMPORARY_INPUT:
+                a = inherit_tmpfiles[a]
 
             cmdline.append(a)
             
@@ -138,33 +146,20 @@ class Run(object):
         return "%s %s" % (" ".join(ev), self.cmd_line_c)
 
 
-class RunSpec(object):
-    def __init__(self, bmk_binary, bmk_input):
-        self.bmk_binary = bmk_binary
-        self.bmk_input = bmk_input
-
-        self.bid = self.bmk_binary.get_id()
-        self.input_name = bmk_input.get_id()
-
+class BasicRunSpec(object):
+    def __init__(self):
         self.binary = None
         self.args = []
         self.env = {}
         self.runs = []
-        self.checker = None
-    
+
     def get_id(self):
         return "%s/%s" % (self.bid, self.input_name)
 
-    def set_binary(self, cwd, binary):
+    def set_binary(self, cwd, binary, in_path = False):
         self.cwd = cwd
         self.binary = os.path.join(cwd, binary)
-        self.bid = self.bmk_binary.get_id()
-
-    def set_checker(self, checker):
-        self.checker = checker
-
-    def set_perf(self, perf):
-        self.perf = perf
+        self.in_path = in_path
 
     def has_env_var(self, var):
         return var in self.env
@@ -188,19 +183,14 @@ class RunSpec(object):
 
     def check(self):
         # make sure binary exists
-        if not os.path.exists(self.binary):
-            # must provide full-path even if in PATH ...
+        if not self.in_path and not os.path.exists(self.binary):
             log.error("Binary %s not found [bin %s]" % (self.binary, self.bid))
             return False
             
-        if not os.path.isfile(self.binary):
+        if not self.in_path and not os.path.isfile(self.binary):
             log.error("Binary %s is not a file [bin %s]" % (self.binary, self.bid))
             return False
             
-        if not self.checker:
-            log.error("No checker specified for input  %s [bin %s] " % (self.input_name, self.bid))
-            return False
-
         for a in self.get_input_files():
             if not os.path.exists(a):
                 log.error("Input file '%s' does not exist [bin %s]" % (a, self.bid))
@@ -210,6 +200,44 @@ class RunSpec(object):
             if not os.path.isfile(a):
                 log.error("Input file '%s' is not a file [bin %s]" % (a, self.bid))
                 return False
+
+        return True
+
+    def run(self, **kwargs):
+        x = Run(self.env, self.binary, self.args)
+        x.run(**kwargs)
+        self.runs.append(x)
+        return x
+
+    def __str__(self):
+        ev = ["%s=%s" % (k, v) for k, v in self.env.iteritems()]
+        args = ["%s" % (a) for a, b in self.args]
+        return "%s %s %s" % (" ".join(ev), self.binary, " ".join(args))
+        
+class RunSpec(BasicRunSpec):
+    def __init__(self, bmk_binary, bmk_input):
+        super(RunSpec, self).__init__()
+
+        self.bmk_binary = bmk_binary
+        self.bmk_input = bmk_input
+        
+        self.bid = self.bmk_binary.get_id()
+        self.input_name = bmk_input.get_id()
+        self.checker = None
+    
+    def set_checker(self, checker):
+        self.checker = checker
+
+    def set_perf(self, perf):
+        self.perf = perf
+
+    def check(self):
+        if not super(RunSpec, self).check():
+            return False
+
+        if not self.checker:
+            log.error("No checker specified for input  %s [bin %s] " % (self.input_name, self.bid))
+            return False
 
         for a in self.checker.get_input_files():
             if not os.path.exists(a):
@@ -222,14 +250,3 @@ class RunSpec(object):
                 return False
 
         return True
-
-    def run(self):
-        x = Run(self.env, self.binary, self.args)
-        x.run()
-        self.runs.append(x)
-        return x
-
-    def __str__(self):
-        ev = ["%s=%s" % (k, v) for k, v in self.env.iteritems()]
-        args = ["%s" % (a) for a, b in self.args]
-        return "%s %s %s" % (" ".join(ev), self.binary, " ".join(args))

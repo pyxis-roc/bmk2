@@ -5,6 +5,7 @@ import os
 import ConfigParser
 import argparse
 import common
+import fnmatch
 
 def read_cfg_file(cfgfile, inpproc = None, bmktest2 = None):
     unserialize_input = None
@@ -62,6 +63,7 @@ def write_cfg_file(cfgfile, basepath, entries):
         
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Prepare an inputs database")
+    p.add_argument("--glob", help="Glob")
     p.add_argument("inpproc", help="Input processor (python module)")
     p.add_argument("dbfile", help="Output database file")
     p.add_argument("basepath", nargs="?", help="Scan this path for inputs", default=".")
@@ -77,6 +79,10 @@ if __name__ == "__main__":
     out = []
     for root, dirnames, filenames in os.walk(basepath):
         rp = os.path.relpath(root, basepath)
+        
+        if args.glob:
+            filenames = fnmatch.filter(filenames, args.glob)       
+
         for f in filenames:
             x = describe_input(root, f, rp)
             if x:

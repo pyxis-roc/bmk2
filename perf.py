@@ -30,11 +30,12 @@ class PerfFn(object):
         return {'time_ns': time_ns}
 
 class PerfRE(object):
-    def __init__(self, rexp, re_unit):
+    def __init__(self, rexp, re_unit = None):
         self.re = re.compile(rexp, re.MULTILINE)
         self.units = re_unit
 
-        assert self.units in MULTIPLIERS, "Invalid unit %s" % (re_unit)
+        if re_unit:
+            assert self.units in MULTIPLIERS, "Invalid unit %s" % (re_unit)
 
     def get_perf(self, run):
         if not (run.run_ok and run.check_ok):
@@ -61,6 +62,8 @@ class PerfRE(object):
             time_ns = int(gd['time_s']) * MULTIPLIERS['s']
         elif "frac" in gd:
             w, f = int(gd['whole']), int(gd['frac'])
+
+            assert self.units is not None
 
             m = MULTIPLIERS[self.units]
 

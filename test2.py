@@ -10,7 +10,7 @@ import time
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
-def std_run(rs):
+def std_run(args, rs):
     rsid = rs.get_id()
     x = rs.run()
 
@@ -28,8 +28,8 @@ def std_run(rs):
             return False, x
     else:
         log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
-        if r.stdout: log.info("%s STDOUT\n" %(rsid) + r.stdout)
-        if r.stderr: log.info("%s STDERR\n" %(rsid) + r.stderr + "%s END\n" % (rsid))
+        if x.stdout: log.info("%s STDOUT\n" %(rsid) + x.stdout)
+        if x.stderr: log.info("%s STDERR\n" %(rsid) + x.stderr + "%s END\n" % (rsid))
         x.cleanup()
         return False, x
     
@@ -40,7 +40,7 @@ def do_run(args, rspecs):
     for rs in rspecs:
         rsid = rs.get_id()
 
-        run_ok, x = std_run(rs)
+        run_ok, x = std_run(args, rs)
         if not run_ok and args.fail_fast:
             sys.exit(1)
 
@@ -56,8 +56,7 @@ def do_perf(args, rspecs):
         while run < args.repeat:
             ts = datetime.datetime.now()
             log.info("PERFDATE BEGIN_RUN %s" % (ts.strftime(TIME_FMT)))
-
-            run_ok, x = std_run(rs)
+            run_ok, x = std_run(args, rs)
             log.info("PERFDATE END_RUN %s" % (datetime.datetime.now().strftime(TIME_FMT)))
 
             if run_ok:
@@ -67,6 +66,7 @@ def do_perf(args, rspecs):
                     if args.fail_fast:
                         sys.exit(1)
 
+                # TODO: delay this until we have all repeats?
                 log.log(PERF_LEVEL, "%s %s: %s %s" % (rsid, runid, run, p['time_ns']))
                 run += 1
             else:
@@ -76,6 +76,8 @@ def do_perf(args, rspecs):
                 else:
                     if args.fail_fast:
                         sys.exit(1)
+
+                    break
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)

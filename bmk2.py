@@ -19,7 +19,7 @@ def load_binary_specs(f):
     if 'BINARIES' in g:
         return g['BINARIES']
     else:
-        logging.error("No BINARIES in " + f)
+        log.error("No BINARIES in " + f)
         return None
         
 class Loader(object):
@@ -52,12 +52,12 @@ class Loader(object):
         return True
 
     def split_binputs(self, binputs):
-        inpnames = set([i.get_id() for i in self.inputdb])
-
         bins = set()
         inputs = set()
 
         if binputs:
+            inpnames = set([i.get_id() for i in self.inputdb])
+
             for i in binputs:
                 if i in inpnames:
                     inputs.add(i)
@@ -65,9 +65,10 @@ class Loader(object):
                     bins.add(i)
 
         self.inp_filtered = len(inputs) > 0
+
         return inputs, bins            
 
-    def load_binaries(self, binspec, binputs = None):
+    def load_binaries(self, binspec, sel_binaries = None):
         d = os.path.dirname(binspec)
         binaries = load_binary_specs(binspec)
         if binaries:
@@ -76,8 +77,8 @@ class Loader(object):
                     log.error("Duplicate binary id %s in %s" % (b.get_id(), binspec))
                     return False
 
-                if binputs and b.get_id() not in binputs:
-                    log.debug("Ignoring binary id %s in %s, not in sel_inputs" % (b.get_id(), binspec))
+                if sel_binaries and b.get_id() not in sel_binaries:
+                    log.debug("Ignoring binary id %s in %s, not in sel_binaries" % (b.get_id(), binspec))
                     continue
 
                 self.binaries[b.get_id()] = b
@@ -85,7 +86,7 @@ class Loader(object):
 
             return True
         
-        if len(binaries) == 0:
+        if not binaries or len(binaries) == 0:
             log.error("BINARIES is empty in " + binspec)
 
         return False
