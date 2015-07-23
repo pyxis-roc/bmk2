@@ -41,7 +41,11 @@ class BinInputSpecV1(object):
     def read(self, ff):
         out = []
         for l in ff:
-            ls = l.strip().split(" ", 1)
+            l = l.strip()
+            if l[0] == "#":
+                continue
+
+            ls = l.split(" ", 1)
             binmatch = ls[0]
             inpnames = [x.strip() for x in ls[1].split(",")]
             out.append((re.compile(binmatch), set(inpnames)))
