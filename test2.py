@@ -6,49 +6,93 @@ import os
 import bmk2
 import logging
 import datetime
+import time
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
+def std_run(rs):
+    rsid = rs.get_id()
+    x = rs.run()
+
+    if x.run_ok:
+        if args.verbose:
+            if x.stdout: log.info(x.stdout)
+            if x.stderr: log.info(x.stderr)
+
+        if rs.checker.check(x):
+            log.log(PASS_LEVEL, "%s: %s" % (rsid, x))
+            x.cleanup()
+            return True, x
+        else:
+            log.log(FAIL_LEVEL, "%s: check failed: %s" % (rsid, x))
+            return False, x
+    else:
+        log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
+        if r.stdout: log.info("%s STDOUT\n" %(rsid) + r.stdout)
+        if r.stderr: log.info("%s STDERR\n" %(rsid) + r.stderr + "%s END\n" % (rsid))
+        x.cleanup()
+        return False, x
+    
 def do_run(args, rspecs):
     log.info("SYSTEM: %s" % (",".join(os.uname())))
     log.info("DATE START %s" % (datetime.datetime.now().strftime(TIME_FMT)))
 
     for rs in rspecs:
-        x = rs.run()
         rsid = rs.get_id()
 
-        if x.run_ok:
-            if args.verbose:
-                if x.stdout: log.info(x.stdout)
-                if x.stderr: log.info(x.stderr)
+        run_ok, x = std_run(rs)
+        if not run_ok and args.fail_fast:
+            sys.exit(1)
 
-            if rs.checker.check(x):
-                log.log(PASS_LEVEL, "%s: %s" % (rsid, x))
-                x.cleanup()
+def do_perf(args, rspecs):
+    runid = int(time.time()) # this should really be a nonce
+
+    for rs in rspecs:
+        rsid = rs.get_id()
+        run = 0
+        repeat = 0
+        runid += 1
+
+        while run < args.repeat:
+            ts = datetime.datetime.now()
+            log.info("PERFDATE BEGIN_RUN %s" % (ts.strftime(TIME_FMT)))
+
+            run_ok, x = std_run(rs)
+            log.info("PERFDATE END_RUN %s" % (datetime.datetime.now().strftime(TIME_FMT)))
+
+            if run_ok:
+                p = rs.perf.get_perf(x)
+                if p is None:
+                    log.log(FAIL_LEVEL, "%s: perf extraction failed: %s" % (rsid, x))
+                    if args.fail_fast:
+                        sys.exit(1)
+
+                log.log(PERF_LEVEL, "%s %s: %s %s" % (rsid, runid, run, p['time_ns']))
+                run += 1
             else:
-                log.log(FAIL_LEVEL, "%s: check failed: %s" % (rsid, x))
-                if args.fail_fast:
-                    sys.exit(1)
-        else:
-            log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
-            if r.stdout: log.info("%s STDOUT\n" %(rsid) + r.stdout)
-            if r.stderr: log.info("%s STDERR\n" %(rsid) + r.stderr + "%s END\n" % (rsid))
-            x.cleanup()
-            if args.fail_fast:
-                sys.exit(1)
+                if repeat < 3:
+                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid, x))
+                    repeat += 1
+                else:
+                    if args.fail_fast:
+                        sys.exit(1)
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 FAIL_LEVEL = logging.getLevelName("ERROR") + 1
 PASS_LEVEL = logging.getLevelName("ERROR") + 2
+PERF_LEVEL = logging.getLevelName("ERROR") + 3
+
 logging.addLevelName(FAIL_LEVEL, "FAIL")
 logging.addLevelName(PASS_LEVEL, "PASS")
+logging.addLevelName(PERF_LEVEL, "PERF")
 
 p = argparse.ArgumentParser("Run tests")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")
 p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor")
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
+p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
@@ -58,7 +102,12 @@ plist.add_argument('--show-files', action="store_true", help="Limit to binaries 
 prun = sp.add_parser('run', help="Run binaries")
 prun.add_argument('binputs', nargs='*', help="List of binaries and/or inputs to execute")
 prun.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fast", default=False)
-prun.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of program", default=False)
+
+
+pperf = sp.add_parser('perf', help="Run performance tests")
+pperf.add_argument('binputs', nargs='*', help="List of binaries and/or inputs to execute")
+pperf.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fast", default=False)
+pperf.add_argument('-r', dest="repeat", metavar="N", type=int, help="Number of repetitions", default=3)
 
 args = p.parse_args()
 
@@ -84,6 +133,9 @@ if not all(checks):
 
 log.info("Configuration loaded successfully.")
 
+log.info("SYSTEM: %s" % (",".join(os.uname())))
+log.info("DATE START %s" % (datetime.datetime.now().strftime(TIME_FMT)))
+
 if args.command == "list":
     prev_bid = None
     for rs in rspecs:
@@ -98,5 +150,5 @@ if args.command == "list":
 
 elif args.command == "run":
     do_run(args, rspecs)
-
-
+elif args.command == "perf":
+    do_perf(args, rspecs)
