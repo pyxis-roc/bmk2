@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import logging
 
+
 log = logging.getLogger(__name__)
 
 if not hasattr(subprocess, "check_output"):
@@ -61,13 +62,17 @@ class Binary(object):
         raise NotImplementedError
 
 class Input(object):
-    def __init__(self, props):
+    def __init__(self, props, db = None):
         self.props = Properties()
+        self.db = db
 
         for k, v in props.iteritems():
             setattr(self.props, k, v)
 
         self.name = self.props.name
+
+    def get_alt_format(self, fmt):
+        return self.db.get_alt_format(self.name, fmt)
 
     def hasprop(self, prop):
         return hasattr(self.props, prop)
@@ -229,7 +234,8 @@ class RunSpec(BasicRunSpec):
         self.bid = self.bmk_binary.get_id()
         self.input_name = bmk_input.get_id()
         self.checker = None
-    
+        self.perf = None
+
     def set_checker(self, checker):
         self.checker = checker
 
@@ -241,7 +247,11 @@ class RunSpec(BasicRunSpec):
             return False
 
         if not self.checker:
-            log.error("No checker specified for input  %s [bin %s] " % (self.input_name, self.bid))
+            log.error("No checker specified for input %s [bin %s] " % (self.input_name, self.bid))
+            return False
+
+        if not self.perf:
+            log.error("No perf specified for input %s [bin %s] " % (self.input_name, self.bid))
             return False
 
         for a in self.checker.get_input_files():

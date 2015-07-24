@@ -6,6 +6,39 @@ import ConfigParser
 import argparse
 import common
 import fnmatch
+import inputprops
+from core import Input
+
+class InputDB(object):
+    def __init__(self, cfgfile, inpproc = None, inputprops = None):
+        self.cfg = cfgfile
+        self.inpproc = inpproc
+        self.inputprops = inputprops
+
+    def get_alt_format(self, name, fmt):
+        if name in self.n2i:
+            for x in self.n2i[name]:
+                if x.props.format == fmt:
+                    return x
+        
+    def load(self):
+        bt = {}
+        self.inputdb = read_cfg_file(self.cfg, self.inpproc, bt)
+
+        if self.inputprops is not None:
+            # not .props as Properties!
+            self.props = inputprops.read_prop_file(self.inputprops, bt)
+            inputprops.apply_props(self.inputdb, self.props)
+
+        self.inputdb = [Input(i, self) for i in self.inputdb]
+        self.inpnames = set([i.get_id() for i in self.inputdb])
+
+        self.n2i = dict([(n, list()) for n in self.inpnames])
+        for i in self.inputdb:
+            self.n2i[i.get_id()].append(i)
+
+    def __iter__(self):
+        return iter(self.inputdb)
 
 def read_cfg_file(cfgfile, inpproc = None, bmktest2 = None):
     unserialize_input = None

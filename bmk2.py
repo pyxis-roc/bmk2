@@ -5,7 +5,6 @@ import glob
 import os
 import inputdb
 import bispec
-import inputprops
 from core import *
 from checkers import *
 from perf import *
@@ -21,7 +20,7 @@ def load_binary_specs(f):
     else:
         log.error("No BINARIES in " + f)
         return None
-        
+       
 class Loader(object):
     def __init__(self, metadir, inpproc):
         self.config = Config(metadir, inpproc)        
@@ -36,16 +35,10 @@ class Loader(object):
         if not self.config.auto_set_files():
             return False
 
-        bt = {}
-        self.inputdb = inputdb.read_cfg_file(self.config.get_file(FT_INPUTDB), self.config.get_file(FT_INPUTPROC), bt)
-
-        if self.config.get_file(FT_INPUTPROPS) is not None:
-            self.inputprops = inputprops.read_prop_file(self.config.get_file(FT_INPUTPROPS), bt)
-            inputprops.apply_props(self.inputdb, self.inputprops)
-        else:
-            self.inputprops = None
-
-        self.inputdb = [Input(i) for i in self.inputdb]
+        self.inputdb = inputdb.InputDB(self.config.get_file(FT_INPUTDB), 
+                                       self.config.get_file(FT_INPUTPROC),
+                                       self.config.get_file(FT_INPUTPROPS))
+        self.inputdb.load()
         self.bs = bispec.read_bin_input_spec(self.config.get_file(FT_BISPEC))
         self.bs.set_input_db(self.inputdb)
 
@@ -56,7 +49,7 @@ class Loader(object):
         inputs = set()
 
         if binputs:
-            inpnames = set([i.get_id() for i in self.inputdb])
+            inpnames = self.inputdb.inpnames
 
             for i in binputs:
                 if i in inpnames:
