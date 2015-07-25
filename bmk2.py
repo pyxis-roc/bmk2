@@ -61,6 +61,12 @@ class Loader(object):
 
         return inputs, bins            
 
+    def load_multiple_binaries(self, binspecs, sel_binaries = None):
+        for b in binspecs:
+            if not self.load_binaries(b, sel_binaries):
+                return False
+
+        return True
     def load_binaries(self, binspec, sel_binaries = None):
         d = os.path.dirname(binspec)
         binaries = load_binary_specs(binspec)
@@ -115,9 +121,12 @@ class Loader(object):
     def get_run_specs(self):
         out = []
         for bid, b in self.binaries.iteritems():
-            for inp in self.bin_inputs[bid]:
-                out.append(b.get_run_spec(inp))
-
+            if bid in self.bin_inputs:
+                for inp in self.bin_inputs[bid]:
+                    out.append(b.get_run_spec(inp))
+            else:
+                assert self.inp_filtered, bid
+                    
         return out
 
 if __name__ == "__main__":

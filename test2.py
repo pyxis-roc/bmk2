@@ -7,6 +7,7 @@ import bmk2
 import logging
 import datetime
 import time
+from extras import *
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -96,6 +97,7 @@ p = argparse.ArgumentParser("Run tests")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")
 p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor")
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
+p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
@@ -107,7 +109,6 @@ prun = sp.add_parser('run', help="Run binaries")
 prun.add_argument('binputs', nargs='*', help="List of binaries and/or inputs to execute")
 prun.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fast", default=False)
 
-
 pperf = sp.add_parser('perf', help="Run performance tests")
 pperf.add_argument('binputs', nargs='*', help="List of binaries and/or inputs to execute")
 pperf.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fast", default=False)
@@ -115,8 +116,13 @@ pperf.add_argument('-r', dest="repeat", metavar="N", type=int, help="Number of r
 
 args = p.parse_args()
 
-if not os.path.exists(args.binspec):
-    print >>sys.stderr, "Unable to find %s" % (args.binspec,)
+
+if args.scan:
+    binspecs = scan(args.scan, "bmktest2.py")
+else:
+    if not os.path.exists(args.binspec):
+        print >>sys.stderr, "Unable to find %s" % (args.binspec,)
+    binspecs = [args.binspec]
 
 l = bmk2.Loader(args.metadir, args.inpproc)
 if not l.initialize(): sys.exit(1)
@@ -124,7 +130,7 @@ if not l.initialize(): sys.exit(1)
 sel_inputs, sel_binaries = l.split_binputs(args.binputs)
 
 sys.path.append(args.metadir)
-if not l.load_binaries(args.binspec, sel_binaries): sys.exit(1)
+if not l.load_multiple_binaries(binspecs, sel_binaries): sys.exit(1)
 if not l.associate_inputs(sel_inputs): sys.exit(1)
 
 rspecs = l.get_run_specs()
@@ -137,8 +143,9 @@ if not all(checks):
 
 log.info("Configuration loaded successfully.")
 
+start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
-log.info("DATE START %s" % (datetime.datetime.now().strftime(TIME_FMT)))
+log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 
 if args.command == "list":
     prev_bid = None
@@ -154,5 +161,11 @@ if args.command == "list":
 
 elif args.command == "run":
     do_run(args, rspecs)
+    summarize(log, rspecs)
 elif args.command == "perf":
     do_perf(args, rspecs)
+    summarize(log, rspecs)
+
+end = datetime.datetime.now()
+log.info("DATE END %s" % (end.strftime(TIME_FMT)))
+log.info("APPROXIMATE DURATION %s" % (end - start)) # modulo clock adjusting, etc.
