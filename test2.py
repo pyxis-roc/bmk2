@@ -46,7 +46,8 @@ def do_run(args, rspecs):
             sys.exit(1)
 
 def do_perf(args, rspecs):
-    runid = int(time.time()) # this should really be a nonce
+    runid_base = str(time.time()) # this should really be a nonce
+    runid = 0
 
     for rs in rspecs:
         rsid = rs.get_id()
@@ -70,7 +71,7 @@ def do_perf(args, rspecs):
                         break
 
                 # TODO: delay this until we have all repeats?
-                log.log(PERF_LEVEL, "%s %s: %s %s" % (rsid, runid, run, p['time_ns']))
+                log.log(PERF_LEVEL, "%s %s.%s %s %s %s" % (rsid, runid_base, runid, run, p['time_ns'], x))
                 run += 1
             else:
                 if repeat < 3:
@@ -83,7 +84,6 @@ def do_perf(args, rspecs):
                     break
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 FAIL_LEVEL = logging.getLevelName("ERROR") + 1
 PASS_LEVEL = logging.getLevelName("ERROR") + 2
@@ -98,6 +98,7 @@ p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configur
 p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor")
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
+p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
@@ -116,6 +117,15 @@ pperf.add_argument('-r', dest="repeat", metavar="N", type=int, help="Number of r
 
 args = p.parse_args()
 
+if args.log:
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s', filename=args.log, filemode='wb') # note the 'wb', instead of 'a'
+    console = logging.StreamHandler()
+    fmt = logging.Formatter('%(levelname)-8s %(name)-10s %(message)s')
+    console.setLevel(logging.INFO)
+    console.setFormatter(fmt)
+    logging.getLogger('').addHandler(console)
+else:
+    logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)-10s %(message)s')
 
 if args.scan:
     binspecs = scan(args.scan, "bmktest2.py")
@@ -169,3 +179,4 @@ elif args.command == "perf":
 end = datetime.datetime.now()
 log.info("DATE END %s" % (end.strftime(TIME_FMT)))
 log.info("APPROXIMATE DURATION %s" % (end - start)) # modulo clock adjusting, etc.
+logging.shutdown()
