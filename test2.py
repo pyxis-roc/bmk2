@@ -8,8 +8,21 @@ import logging
 import datetime
 import time
 from extras import *
+import logproc
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
+
+def read_log(logfiles):
+    if not isinstance(logfiles, list):
+        logfiles = [logfiles]
+
+    binids = set()
+    for l in logfiles:
+        for r in logproc.parse_log_file(l):
+            if r.type == "PERF":
+                binids.add(r.binid)
+
+    return binids
 
 def std_run(args, rs):
     rsid = rs.get_id()
@@ -104,7 +117,9 @@ p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor"
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
+p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
+p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
@@ -121,6 +136,11 @@ pperf.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fas
 pperf.add_argument('-r', dest="repeat", metavar="N", type=int, help="Number of repetitions", default=3)
 
 args = p.parse_args()
+
+PREV_BINIDS = set()
+if args.readlog:
+    assert args.readlog != args.log
+    PREV_BINIDS = read_log(args.readlog)
 
 if args.log:
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s', filename=args.log, filemode='wb') # note the 'wb', instead of 'a'
@@ -161,6 +181,9 @@ log.info("Configuration loaded successfully.")
 start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
+
+if args.missing:
+    rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
 
 if args.command == "list":
     prev_bid = None
