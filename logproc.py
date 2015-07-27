@@ -12,11 +12,14 @@ run_end = namedtuple("run_end", ['type', 'end'])
 
 perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', 'cmdline'])
 
+missing_info = namedtuple('missing_info', ['type', 'binid'])
+
 st = re.compile("^START")
 dt = re.compile("^INFO DATE (START|END)")
 pd_begin = re.compile("^INFO PERFDATE BEGIN_RUN")
 pd_end = re.compile("^INFO PERFDATE END_RUN")
 p = re.compile("^PERF ")
+missing = re.compile("^FAIL MISSING PERF")
 
 def parse_log_file(logfile):
     with open(logfile, "r") as f:
@@ -49,7 +52,6 @@ def parse_log_file(logfile):
                 continue
 
             m = p.match(l)
-
             if m:
                 ls = l.strip().split(" ", 5)
                 out = perf_info("PERF", 
@@ -60,3 +62,9 @@ def parse_log_file(logfile):
                                 cmdline = ls[5])
 
                 yield out
+                continue
+
+            m = missing.match(l)
+            if m:
+                yield missing_info("MISSING", binid = l.strip().split()[-1])
+                continue
