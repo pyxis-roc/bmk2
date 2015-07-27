@@ -60,6 +60,7 @@ def do_perf(args, rspecs):
             log.info("PERFDATE BEGIN_RUN %s" % (ts.strftime(TIME_FMT)))
             run_ok, x = std_run(args, rs)
             log.info("PERFDATE END_RUN %s" % (datetime.datetime.now().strftime(TIME_FMT)))
+            runid_c = runid_base + "." + str(runid)
 
             if run_ok:
                 p = rs.perf.get_perf(x)
@@ -71,13 +72,17 @@ def do_perf(args, rspecs):
                         break
 
                 # TODO: delay this until we have all repeats?
-                log.log(PERF_LEVEL, "%s %s.%s %s %s %s" % (rsid, runid_base, runid, run, p['time_ns'], x))
+                log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, runid_c, run, p['time_ns'], x))
                 run += 1
             else:
                 if repeat < 3:
-                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid, x))
+                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid_c, x))
                     repeat += 1
                 else:
+                    if run == 0:
+                        # we never managed to run this ...
+                        log.log(FAIL_LEVEL, "MISSING PERF %s" % (rsid,))
+
                     if args.fail_fast:
                         sys.exit(1)
 

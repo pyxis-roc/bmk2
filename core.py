@@ -115,6 +115,7 @@ class Run(object):
 
             if aty == AT_TEMPORARY_OUTPUT:
                 th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id)
+                os.close(th)
                 log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[a], a))
                 a = self.tmpfiles[a]
             elif aty == AT_TEMPORARY_INPUT:

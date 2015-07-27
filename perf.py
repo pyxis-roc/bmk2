@@ -26,8 +26,7 @@ class PerfFn(object):
         if not (run.run_ok and run.check_ok):
             return None
 
-        time_ns = self.fn(run.stdout, run.stderr)
-        return {'time_ns': time_ns}
+        return self.fn(run.stdout, run.stderr)
 
 class PerfRE(object):
     def __init__(self, rexp, re_unit = None):
