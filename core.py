@@ -16,8 +16,20 @@ AT_OUTPUT_FILE = 2
 AT_TEMPORARY_OUTPUT = 3
 AT_INPUT_FILE_IMPLICIT = 4
 AT_TEMPORARY_INPUT = 5
+AT_LOG = 6
 
-def run_command(cmd, stdout = True, stderr = True, env = None):
+def escape_for_filename(n):
+    return n.replace("/", "_").replace(".", "")
+    
+def create_log(ftemplate, run):
+    v = {'runid': run.runid}
+
+    if run.rspec: v['rsid'] = escape_for_filename(run.rspec.get_id())
+
+    complete = os.path.join(os.path.dirname(run.binary), ftemplate.format(**v))
+    return complete
+
+def run_command(cmd, stdout = True, stderr = True, env = None): 
     if stderr:
         stdout = True
         stderrh = subprocess.STDOUT
@@ -89,14 +101,14 @@ class Input(object):
     __repr__ = __str__
 
 class Run(object):
-    def __init__(self, env, binary, args):
+    def __init__(self, env, binary, args, rspec = None):
         self.env = env
         self.binary = binary
         self.args = args
-        self.run_env = os.environ.copy()
-        self.run_env.update(self.env)
         self.cmd_line_c = "not-run-yet"
-        self.bin_id = self.binary.replace("/", "_").replace(".", "")
+        self.bin_id = escape_for_filename(self.binary)
+        self.rspec = rspec
+        self.runid = None
 
         self.retval = -1
         self.stdout = ""
@@ -105,8 +117,14 @@ class Run(object):
         self.tmpfiles = {}
         self.run_ok = False
         self.check_ok = False
+        self.overlays = []
+
+    def set_overlays(self, overlays):
+        self.overlays = overlays
 
     def run(self, inherit_tmpfiles = None):
+        assert self.retval == -1, "Can't use the same Run object twice"
+
         cmdline = [self.binary]
 
         for a, aty in self.args:
@@ -123,12 +141,20 @@ class Run(object):
 
             cmdline.append(a)
             
+        env = self.env
+        for ov in self.overlays:
+            env, cmdline = ov.overlay(self, env, cmdline, inherit_tmpfiles)
+
+        self.env = env
         self.cmd_line = cmdline
         self.cmd_line_c = " ".join(self.cmd_line)
 
         log.info("Running %s" % (str(self)))
 
-        self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=self.run_env)
+        run_env = os.environ.copy() # do this at init time instead of runtime?
+        run_env.update(self.env)
+
+        self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=run_env)
         self.run_ok = self.retval == 0
 
         return self.run_ok
@@ -159,10 +185,15 @@ class BasicRunSpec(object):
         self.env = {}
         self.runs = []
         self.in_path = False
+        self.overlays = []
+        self._runids = set()
+
+    def add_overlay(self, overlay):
+        self.overlays.append(overlay)
 
     def get_id(self):
         return "%s/%s" % (self.bid, self.input_name)
-
+    
     def set_binary(self, cwd, binary, in_path = False):
         self.cwd = cwd # TODO: does this do anything?
         self.binary = os.path.join(cwd, binary)
@@ -214,8 +245,13 @@ class BasicRunSpec(object):
 
         return True
 
-    def run(self, **kwargs):
-        x = Run(self.env, self.binary, self.args)
+    def run(self, runid, **kwargs):
+        assert runid not in self._runids, "Duplicate runid %s" % (runid,)
+
+        x = Run(self.env, self.binary, self.args, self)
+        x.set_overlays(self.overlays)
+        x.runid = runid
+        self._runids.add(runid)
         x.run(**kwargs)
         self.runs.append(x)
         return x

@@ -71,7 +71,7 @@ class ExternalChecker(Checker):
             log.error("Cannot check failed run %s" % (run))
             return False
         
-        x = self.rs.run(inherit_tmpfiles = run.tmpfiles)
+        x = self.rs.run(run.runid + ".external-checker", inherit_tmpfiles = run.tmpfiles)
         if not x.run_ok:
             return False
 

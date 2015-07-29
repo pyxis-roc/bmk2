@@ -9,6 +9,7 @@ import datetime
 import time
 from extras import *
 import logproc
+import overlays
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -24,9 +25,9 @@ def read_log(logfiles):
 
     return binids
 
-def std_run(args, rs):
+def std_run(args, rs, runid):
     rsid = rs.get_id()
-    x = rs.run()
+    x = rs.run(runid)
 
     if x.run_ok:
         if args.verbose:
@@ -51,15 +52,19 @@ def do_run(args, rspecs):
     log.info("SYSTEM: %s" % (",".join(os.uname())))
     log.info("DATE START %s" % (datetime.datetime.now().strftime(TIME_FMT)))
 
+    xid_base = str(time.time()) # this should really be a nonce
+    runid = 0
     for rs in rspecs:
         rsid = rs.get_id()
+        xid_c = xid_base + "." + str(runid)
+        runid += 1
 
-        run_ok, x = std_run(args, rs)
+        run_ok, x = std_run(args, rs, xid_c) # in this case because we do not repeat, xid_c == runid
         if not run_ok and args.fail_fast:
             sys.exit(1)
 
 def do_perf(args, rspecs):
-    runid_base = str(time.time()) # this should really be a nonce
+    xid_base = str(time.time()) # this should really be a nonce
     runid = 0
 
     for rs in rspecs:
@@ -69,11 +74,12 @@ def do_perf(args, rspecs):
         runid += 1
 
         while run < args.repeat:
+            xid_c = xid_base + "." + str(runid)
+
             ts = datetime.datetime.now()
             log.info("PERFDATE BEGIN_RUN %s" % (ts.strftime(TIME_FMT)))
-            run_ok, x = std_run(args, rs)
+            run_ok, x = std_run(args, rs, xid_c + "." + str(run + repeat))
             log.info("PERFDATE END_RUN %s" % (datetime.datetime.now().strftime(TIME_FMT)))
-            runid_c = runid_base + "." + str(runid)
 
             if run_ok:
                 p = rs.perf.get_perf(x)
@@ -85,11 +91,11 @@ def do_perf(args, rspecs):
                         break
 
                 # TODO: delay this until we have all repeats?
-                log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, runid_c, run, p['time_ns'], x))
+                log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, xid_c, run, p['time_ns'], x))
                 run += 1
             else:
                 if repeat < 3:
-                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid_c, x))
+                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, xid_c, x))
                     repeat += 1
                 else:
                     if run == 0:
@@ -106,10 +112,12 @@ log = logging.getLogger(__name__)
 FAIL_LEVEL = logging.getLevelName("ERROR") + 1
 PASS_LEVEL = logging.getLevelName("ERROR") + 2
 PERF_LEVEL = logging.getLevelName("ERROR") + 3
+COLLECT_LEVEL = logging.getLevelName("ERROR") + 4
 
 logging.addLevelName(FAIL_LEVEL, "FAIL")
 logging.addLevelName(PASS_LEVEL, "PASS")
 logging.addLevelName(PERF_LEVEL, "PERF")
+logging.addLevelName(COLLECT_LEVEL, "COLLECT")
 
 p = argparse.ArgumentParser("Run tests")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")
@@ -117,6 +125,10 @@ p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor"
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
+p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
+p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
+p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="cp_{rsid}_{runid}.log")
+
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
@@ -153,10 +165,13 @@ else:
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)-10s %(message)s')
 
 if args.scan:
+    basepath = os.path.abspath(args.scan)
     binspecs = scan(args.scan, "bmktest2.py")
 else:
     if not os.path.exists(args.binspec):
         print >>sys.stderr, "Unable to find %s" % (args.binspec,)
+
+    basepath = os.path.abspath(".")
     binspecs = [args.binspec]
 
 l = bmk2.Loader(args.metadir, args.inpproc)
@@ -181,16 +196,29 @@ log.info("Configuration loaded successfully.")
 start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
-
+log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
+
+if args.cuda_profile:
+    cp_cfg_file = args.cuda_profile_config or l.config.get_var("cp_cfg", None)
+    cp_log_file = args.cuda_profile_log or l.config.get_var("cp_log", None)
+
+    if cp_cfg_file:
+        assert os.path.exists(cp_cfg_file) and os.path.isfile(cp_cfg_file), "CUDA Profiler Config '%s' does not exist or is not a file" % (cp_cfg_file,)
+
+    for r in rspecs:
+        r.add_overlay(overlays.CUDAProfilerOverlay(profile_cfg=cp_cfg_file, profile_log=cp_log_file))
 
 if args.command == "list":
     prev_bid = None
     for rs in rspecs:
         if rs.bid != prev_bid:
-            print rs.bid
+            print rs.bid,
             prev_bid = rs.bid
+            if rs.bid in l.config.disable_binaries:
+                print "\t** DISABLED **",
+            print
 
         print "\t", rs.input_name
         if args.show_files:
@@ -198,9 +226,17 @@ if args.command == "list":
             print "\t\t", " ".join(files)
 
 elif args.command == "run":
+    for b in l.config.disable_binaries:
+        log.info("DISABLED BINARY %s" % (b,))
+
+    rspecs = [rs for rs in rspecs if rs.bid not in l.config.disable_binaries]
     do_run(args, rspecs)
     summarize(log, rspecs)
 elif args.command == "perf":
+    for b in l.config.disable_binaries:
+        log.info("DISABLED BINARY %s" % (b,))
+
+    rspecs = [rs for rs in rspecs if rs.bid not in l.config.disable_binaries]
     do_perf(args, rspecs)
     summarize(log, rspecs)
 
