@@ -25,6 +25,8 @@ class Config(object):
         self.metadir = metadir
         self.okay = False
         self.files = {}
+        self.disable_binaries = set()
+
         if inpproc is not None:
             self.files = {FT_INPUTPROC: inpproc}
 
@@ -94,9 +96,22 @@ class Config(object):
                         return False
                 except ConfigParser.NoOptionError:
                     log.debug("%s: File type %d (property: '%s') not specified" % (self.config_file, ty, prop))
-                    
+
+            try:
+                val = x.get("bmk2", "disable_binaries")
+                self.disable_binaries = set([xx.strip() for xx in val.split(",")])
+            except ConfigParser.NoOptionError:
+                pass
+
+            self.cfg = x
             return True
                     
+    def get_var(self, key, default = None, sec = "bmk2"):
+        try:
+            return self.cfg.get(sec, key)
+        except ConfigParser.NoOptionError:
+            return default
+
     def auto_set_files(self):
         for ty in range(FT_FIRST, FT_LAST):
             if ty not in self.files and FT_GLOBS[ty] is not None:
