@@ -12,7 +12,7 @@ run_begin = namedtuple("run_begin", ['type', 'begin'])
 run_end = namedtuple("run_end", ['type', 'end'])
 collect_entry = namedtuple("collect_entry", ['type', 'rsid', 'runid', 'filetype', 'file'])
 perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', 'cmdline'])
-
+tc_info = namedtuple('tc_info', ['type', 'rsid', 'task', 'task_args'])
 missing_info = namedtuple('missing_info', ['type', 'binid'])
 
 st = re.compile("^START")
@@ -23,6 +23,7 @@ pd_begin = re.compile("^INFO PERFDATE BEGIN_RUN")
 pd_end = re.compile("^INFO PERFDATE END_RUN")
 p = re.compile("^PERF ")
 missing = re.compile("^FAIL MISSING PERF")
+tc_re = re.compile("^TASK_COMPLETE ([^ ]+) ([^ ]+)( (.*))?$")
 
 def parse_log_file(logfile):
     with open(logfile, "r") as f:
@@ -89,3 +90,17 @@ def parse_log_file(logfile):
             if m:
                 yield missing_info("MISSING", binid = l.strip().split()[-1])
                 continue
+
+            m = tc_re.match(l)
+            if m:
+                rsid = m.group(1)
+                task = m.group(2).strip()
+                task_args = m.group(4)
+
+                yield tc_info("TASK_COMPLETE", rsid, task, task_args)
+                continue
+
+if __name__ == "__main__":
+    import sys
+    for r in parse_log_file(sys.argv[1]):
+        print r

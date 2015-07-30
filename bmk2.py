@@ -28,12 +28,19 @@ class Loader(object):
         self.bin_inputs = {}
         self.inp_filtered = False
 
-    def initialize(self):
+    def initialize(self, ftf = {}):
         if not self.config.load_config():
             return False
         
         if not self.config.auto_set_files():
             return False
+
+        for ty, f in ftf.iteritems():
+            if isinstance(f, list):
+                for ff in f:
+                    self.config.set_file(ff, ty)
+            else:
+                self.config.set_file(f, ty)
 
         self.inputdb = inputdb.InputDB(self.config.get_file(FT_INPUTDB), 
                                        self.config.get_file(FT_INPUTPROC),

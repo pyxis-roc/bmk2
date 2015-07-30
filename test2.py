@@ -10,6 +10,7 @@ import time
 from extras import *
 import logproc
 import overlays
+import config
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -20,8 +21,8 @@ def read_log(logfiles):
     binids = set()
     for l in logfiles:
         for r in logproc.parse_log_file(l):
-            if r.type == "PERF":
-                binids.add(r.binid)
+            if r.type == "TASK_COMPLETE":
+                binids.add(r.rsid)
 
     return binids
 
@@ -49,8 +50,7 @@ def std_run(args, rs, runid):
         return False, x
     
 def do_run(args, rspecs):
-    log.info("SYSTEM: %s" % (",".join(os.uname())))
-    log.info("DATE START %s" % (datetime.datetime.now().strftime(TIME_FMT)))
+    log.info("TASK run")
 
     xid_base = str(time.time()) # this should really be a nonce
     runid = 0
@@ -62,8 +62,12 @@ def do_run(args, rspecs):
         run_ok, x = std_run(args, rs, xid_c) # in this case because we do not repeat, xid_c == runid
         if not run_ok and args.fail_fast:
             sys.exit(1)
-
+        
+        if run_ok:
+            log.log(TASK_COMPLETE_LEVEL, "%s RUN" % (rsid,))
+            
 def do_perf(args, rspecs):
+    log.info("TASK perf")
     xid_base = str(time.time()) # this should really be a nonce
     runid = 0
 
@@ -101,6 +105,8 @@ def do_perf(args, rspecs):
                     if run == 0:
                         # we never managed to run this ...
                         log.log(FAIL_LEVEL, "MISSING PERF %s" % (rsid,))
+                    else:
+                        log.log(TASK_COMPLETE_LEVEL, "%s PERF %d/%d/%d" % (rsid, run, repeat, args.repeat))
 
                     if args.fail_fast:
                         sys.exit(1)
@@ -113,16 +119,19 @@ FAIL_LEVEL = logging.getLevelName("ERROR") + 1
 PASS_LEVEL = logging.getLevelName("ERROR") + 2
 PERF_LEVEL = logging.getLevelName("ERROR") + 3
 COLLECT_LEVEL = logging.getLevelName("ERROR") + 4
+TASK_COMPLETE_LEVEL = logging.getLevelName("ERROR") + 5
 
 logging.addLevelName(FAIL_LEVEL, "FAIL")
 logging.addLevelName(PASS_LEVEL, "PASS")
 logging.addLevelName(PERF_LEVEL, "PERF")
 logging.addLevelName(COLLECT_LEVEL, "COLLECT")
+logging.addLevelName(TASK_COMPLETE_LEVEL, "TASK_COMPLETE")
 
 p = argparse.ArgumentParser("Run tests")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")
 p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor")
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
+p.add_argument("--bispec", dest="bispec", metavar="FILE_OR_MNEMONIC", help="Binary+Input specification")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
@@ -164,6 +173,10 @@ if args.log:
 else:
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)-10s %(message)s')
 
+
+if args.readlog:
+    log.info('%d completed task rsids read from log' % (len(PREV_BINIDS)))
+
 if args.scan:
     basepath = os.path.abspath(args.scan)
     binspecs = scan(args.scan, "bmktest2.py")
@@ -175,8 +188,19 @@ else:
     binspecs = [args.binspec]
 
 l = bmk2.Loader(args.metadir, args.inpproc)
-if not l.initialize(): sys.exit(1)
+ftf = {}
+if args.bispec:
+    f = None
+    if os.path.exists(args.bispec) and os.path.isfile(args.bispec):
+        f = args.bispec
+    else:
+        f = l.config.get_var("bispec_" + args.bispec, None)
+        f = os.path.join(args.metadir, f)
 
+    assert f is not None, "Unable to find file or spec in config file for bispec '%s'" % (args.bispec,)
+    ftf[config.FT_BISPEC] = f
+
+if not l.initialize(ftf): sys.exit(1)
 sel_inputs, sel_binaries = l.split_binputs(args.binputs)
 
 sys.path.append(args.metadir)
@@ -197,6 +221,7 @@ start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
+
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
 
@@ -224,22 +249,20 @@ if args.command == "list":
         if args.show_files:
             files = rs.get_input_files() +rs.checker.get_input_files()
             print "\t\t", " ".join(files)
-
 elif args.command == "run":
     for b in l.config.disable_binaries:
         log.info("DISABLED BINARY %s" % (b,))
 
     rspecs = [rs for rs in rspecs if rs.bid not in l.config.disable_binaries]
     do_run(args, rspecs)
-    summarize(log, rspecs)
 elif args.command == "perf":
     for b in l.config.disable_binaries:
         log.info("DISABLED BINARY %s" % (b,))
 
     rspecs = [rs for rs in rspecs if rs.bid not in l.config.disable_binaries]
     do_perf(args, rspecs)
-    summarize(log, rspecs)
 
+summarize(log, rspecs)    
 end = datetime.datetime.now()
 log.info("DATE END %s" % (end.strftime(TIME_FMT)))
 log.info("APPROXIMATE DURATION %s" % (end - start)) # modulo clock adjusting, etc.

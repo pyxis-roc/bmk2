@@ -30,8 +30,10 @@ class Config(object):
         if inpproc is not None:
             self.files = {FT_INPUTPROC: inpproc}
 
+        self._load_config()
+
     def set_file(self, f, ty, multiple = False):
-        assert not (ty < FT_FIRST or ty > FT_LAST), "Invalid file type: %d" % (ty,)
+        assert not (ty < FT_FIRST or ty > FT_LAST), "Invalid file type: %s" % (ty,)
         
         if multiple:
             assert ty in FT_MULTIPLE_OKAY, "File type %d not in multiple" % (ty,)
@@ -60,7 +62,7 @@ class Config(object):
 
         return self.files[ty]
         
-    def load_config(self):
+    def _load_config(self):
         if not (os.path.exists(self.metadir) and os.path.isdir(self.metadir)):
             log.error("Metadir '%s' does not exist or is not a directory" % (self.metadir,))
             return False
@@ -83,28 +85,33 @@ class Config(object):
                 log.error("%s: Unable to read version" % (self.config_file,))
                 return False
 
-            for prop, ty in [("inpproc", FT_INPUTPROC),
-                             ("inputdb", FT_INPUTDB),
-                             ("inputprops", FT_INPUTPROPS),
-                             ("bispec", FT_BISPEC)]:
-                try:
-                    val = x.get("bmk2", prop)
-                    val = os.path.join(self.metadir, val)
-                    if self.set_file(val, ty):
-                        log.info("%s: Loaded file type %d ('%s')" % (self.config_file, ty, val))
-                    else:
-                        return False
-                except ConfigParser.NoOptionError:
-                    log.debug("%s: File type %d (property: '%s') not specified" % (self.config_file, ty, prop))
-
-            try:
-                val = x.get("bmk2", "disable_binaries")
-                self.disable_binaries = set([xx.strip() for xx in val.split(",")])
-            except ConfigParser.NoOptionError:
-                pass
-
             self.cfg = x
-            return True
+
+    def load_config(self):
+        x = self.cfg
+
+        for prop, ty in [("inpproc", FT_INPUTPROC),
+                         ("inputdb", FT_INPUTDB),
+                         ("inputprops", FT_INPUTPROPS),
+                         ("bispec", FT_BISPEC)]:
+            try:
+                val = x.get("bmk2", prop)
+                val = os.path.join(self.metadir, val)
+                if self.set_file(val, ty):
+                    log.info("%s: Loaded file type %d ('%s')" % (self.config_file, ty, val))
+                else:
+                    return False
+            except ConfigParser.NoOptionError:
+                log.debug("%s: File type %d (property: '%s') not specified" % (self.config_file, ty, prop))
+
+        try:
+            val = x.get("bmk2", "disable_binaries")
+            self.disable_binaries = set([xx.strip() for xx in val.split(",")])
+        except ConfigParser.NoOptionError:
+            pass
+
+        self.cfg = x
+        return True
                     
     def get_var(self, key, default = None, sec = "bmk2"):
         try:
