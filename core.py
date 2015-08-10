@@ -2,7 +2,7 @@ import os
 import subprocess
 import tempfile
 import logging
-
+import resource
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def create_log(ftemplate, run):
     complete = os.path.join(os.path.dirname(run.binary), ftemplate.format(**v))
     return complete
 
-def run_command(cmd, stdout = True, stderr = True, env = None): 
+def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}): 
     if stderr:
         stdout = True
         stderrh = subprocess.STDOUT
@@ -41,7 +41,7 @@ def run_command(cmd, stdout = True, stderr = True, env = None):
 
     if stdout:
         try:
-            output = subprocess.check_output(cmd, stderr=stderrh, env = env)
+            output = subprocess.check_output(cmd, stderr=stderrh, env = env, **popen_args)
             rv = 0
         except subprocess.CalledProcessError as e:
             #print >>sys.stderr, "Execute failed (%d): " % (e.returncode,) + " ".join(cmd)
@@ -66,6 +66,17 @@ class Properties(object):
     def __str__(self):
         return ", ".join(["%s=%s" % (x, getattr(self, x)) for x in vars(self)])
 
+class RLimit(object):
+    def __init__(self):
+        self.limits = {}
+
+    def setrlimit(self, lim, val):
+        self.limits[lim] = val
+
+    def set(self):
+        for lim, val in self.limits.iteritems():
+            resource.setrlimit(lim, val)
+            
 class Binary(object):
     def get_id(self):
         raise NotImplementedError
@@ -118,6 +129,10 @@ class Run(object):
         self.run_ok = False
         self.check_ok = False
         self.overlays = []
+        self.popen_args = {}
+
+    def set_popen_args(self, kwd, val):
+        self.popen_args[kwd] = val
 
     def set_overlays(self, overlays):
         self.overlays = overlays
@@ -154,7 +169,7 @@ class Run(object):
         run_env = os.environ.copy() # do this at init time instead of runtime?
         run_env.update(self.env)
 
-        self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=run_env)
+        self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=run_env, popen_args = self.popen_args)
         self.run_ok = self.retval == 0
 
         return self.run_ok
@@ -187,6 +202,7 @@ class BasicRunSpec(object):
         self.in_path = False
         self.overlays = []
         self._runids = set()
+        self.rlimit = None
 
     def add_overlay(self, overlay):
         self.overlays.append(overlay)
@@ -249,12 +265,18 @@ class BasicRunSpec(object):
         assert runid not in self._runids, "Duplicate runid %s" % (runid,)
 
         x = Run(self.env, self.binary, self.args, self)
+        if self.rlimit:
+            x.set_popen_args('preexec_fn', self.rlimit.set)
+
         x.set_overlays(self.overlays)
         x.runid = runid
         self._runids.add(runid)
         x.run(**kwargs)
         self.runs.append(x)
         return x
+
+    def set_rlimit(self, rlimit):
+        self.rlimit = rlimit
 
     def __str__(self):
         ev = ["%s=%s" % (k, v) for k, v in self.env.iteritems()]

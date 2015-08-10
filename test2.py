@@ -11,8 +11,19 @@ from extras import *
 import logproc
 import overlays
 import config
+import core
+import resource
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
+
+def load_rlimits(lo):
+    x = core.RLimit()
+    rlimit_cpu = lo.config.get_var("rlimit.cpu", None)
+    if rlimit_cpu is not None:        
+        log.info('Setting RLIMIT_CPU to %s' % (rlimit_cpu,))
+        x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu), int(rlimit_cpu)))
+
+    return x
 
 def read_log(logfiles):
     if not isinstance(logfiles, list):
@@ -234,6 +245,11 @@ if args.cuda_profile:
 
     for r in rspecs:
         r.add_overlay(overlays.CUDAProfilerOverlay(profile_cfg=cp_cfg_file, profile_log=cp_log_file))
+
+rl = load_rlimits(l)
+
+for r in rspecs:
+    r.set_rlimit(rl)
 
 if args.command == "list":
     prev_bid = None

@@ -8,7 +8,7 @@ import os
 
 def build_collect_list(logfile):
     out = {}
-
+    basepath = ""
     for r in logproc.parse_log_file(logfile):
         if r.type == "COLLECT":
             if r.filetype == "basepath":
