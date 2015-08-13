@@ -14,6 +14,7 @@ collect_entry = namedtuple("collect_entry", ['type', 'rsid', 'runid', 'filetype'
 perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', 'cmdline'])
 tc_info = namedtuple('tc_info', ['type', 'rsid', 'task', 'task_args'])
 missing_info = namedtuple('missing_info', ['type', 'binid'])
+instr = namedtuple('instr', ['type', 'name', 'args'])
 
 st = re.compile("^START")
 dt = re.compile("^INFO DATE (START|END)")
@@ -24,6 +25,7 @@ pd_end = re.compile("^INFO PERFDATE END_RUN")
 p = re.compile("^PERF ")
 missing = re.compile("^FAIL MISSING PERF")
 tc_re = re.compile("^TASK_COMPLETE ([^ ]+) ([^ ]+)( (.*))?$")
+instr_re = re.compile("^INSTR ([^ ]+) (.*)$")
 
 def parse_log_file(logfile):
     with open(logfile, "r") as f:
@@ -98,6 +100,14 @@ def parse_log_file(logfile):
                 task_args = m.group(4)
 
                 yield tc_info("TASK_COMPLETE", rsid, task, task_args)
+                continue
+
+            m = instr_re.match(l)
+            if m:
+                name = m.group(1)
+                args = m.group(2)
+
+                yield instr("INSTR", name, args)
                 continue
 
 if __name__ == "__main__":
