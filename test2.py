@@ -145,9 +145,13 @@ p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specificatio
 p.add_argument("--bispec", dest="bispec", metavar="FILE_OR_MNEMONIC", help="Binary+Input specification")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
+
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
 p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="cp_{rsid}_{runid}.log")
+
+p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
+p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
 
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
@@ -245,7 +249,16 @@ if args.cuda_profile:
 
     for r in rspecs:
         r.add_overlay(overlays.CUDAProfilerOverlay(profile_cfg=cp_cfg_file, profile_log=cp_log_file))
+elif args.nvprof:
+    #cp_cfg_file = args.cuda_profile_config or l.config.get_var("cp_cfg", None)
+    cp_log_file = args.cuda_profile_log or l.config.get_var("cp_log", None)
 
+    #if cp_cfg_file:
+    #    assert os.path.exists(cp_cfg_file) and os.path.isfile(cp_cfg_file), "CUDA Profiler Config '%s' does not exist or is not a file" % (cp_cfg_file,)
+
+    for r in rspecs:
+        r.add_overlay(overlays.NVProfOverlay(profile_cfg="--metrics %s" % (args.nvp_metrics), profile_log=cp_log_file))
+    
 rl = load_rlimits(l)
 
 for r in rspecs:

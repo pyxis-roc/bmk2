@@ -10,7 +10,7 @@ class Overlay(object):
         self.args = args
         self.tmpfiles = {}
 
-    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None, logfiles = None):
         if env is None:
             new_env = None
         else:
@@ -22,16 +22,18 @@ class Overlay(object):
             new_cmdline.append(self.binary)
 
         for a, aty in self.args:
-            if aty == AT_INPUT_FILE_IMPLICIT:
+            if aty == core.AT_INPUT_FILE_IMPLICIT:
                 continue
 
-            if aty == AT_TEMPORARY_OUTPUT:
+            if aty == core.AT_TEMPORARY_OUTPUT:
                 th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-ov-")
                 os.close(th)
                 log.debug("Created temporary file '%s' for overlay parameter '%s'" % (self.tmpfiles[a], a))
                 a = self.tmpfiles[a]
-            elif aty == AT_TEMPORARY_INPUT:
+            elif aty == core.AT_TEMPORARY_INPUT:
                 a = inherit_tmpfiles[a]
+            elif aty == core.AT_LOG:
+                a = logfiles[a]
 
             new_cmdline.append(a)
 
@@ -67,3 +69,28 @@ class CUDAProfilerOverlay(Overlay):
             log.log(self.collect, '{rsid} {runid} cuda/profiler cuda_profile_0.log'.format(rsid=run.rspec.get_id(), runid=run.runid))
         
         return super(CUDAProfilerOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
+class NVProfOverlay(Overlay):
+    def __init__(self, profile_cfg = None, profile_log = None):
+        args = [(x, core.AT_OPAQUE) for x in profile_cfg.strip().split()]
+        args += [(x, core.AT_OPAQUE) for x in "--csv --print-gpu-trace".split()]
+        args += [('--log-file', core.AT_OPAQUE), ('@profilecsv', core.AT_LOG)]
+
+        self.profile_cfg = profile_cfg
+        self.profile_log = profile_log
+        
+        self.collect = logging.getLevelName('COLLECT')
+        super(NVProfOverlay, self).__init__(binary="nvprof", args=args)
+
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        if self.profile_log is not None:
+            logfile = core.create_log(self.profile_log, run)
+        else:
+            logfile = 'cuda_profile_0.log'
+
+        if self.profile_log:
+            log.log(self.collect, '{rsid} {runid} cuda/nvprof {logfile}'.format(rsid=run.rspec.get_id(), runid=run.runid, logfile=logfile))
+        else:
+            log.log(self.collect, '{rsid} {runid} cuda/nvprof cuda_profile_0.log'.format(rsid=run.rspec.get_id(), runid=run.runid))
+        
+        return super(NVProfOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles, {'@profilecsv': logfile})
