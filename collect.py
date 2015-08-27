@@ -33,6 +33,9 @@ def build_collect_list(logfile):
                 else:
                     n = r.file[x+1:]
 
+                if args.suffix:
+                    n = n + args.suffix
+
                 out[r.rsid][r.runid][r.filetype].append(n)
 
     return basepath, out
@@ -63,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('filetype', nargs='?', help='Type of files to collect (default: all)', default=[])
     parser.add_argument('-p', dest="strip_path", type=int, metavar='NUM', help='Strip NUM components from filename before combining with basepath', default=0)
     parser.add_argument('-m', dest="map", metavar='FILE', help='Store map of RSID, file and filetype in FILE', default=None)
-
+    parser.add_argument('-s', dest="suffix", metavar='SUFFIX', help='Add suffix to filename', default=0)
     args = parser.parse_args()
 
     basepath, colfiles = build_collect_list(args.logfile)
