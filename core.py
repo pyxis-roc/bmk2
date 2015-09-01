@@ -209,6 +209,8 @@ class BasicRunSpec(object):
         self.rlimit = None
         self.tmpdir = None
 
+        self.errors = set()
+
     def set_tmpdir(self, tmpdir):
         self.tmpdir = tmpdir
 
@@ -251,6 +253,7 @@ class BasicRunSpec(object):
         # make sure binary exists
         if not self.in_path and not os.path.exists(self.binary):
             log.error("Binary %s not found [bin %s]" % (self.binary, self.bid))
+            self.errors.add('missing-binary')
             return False
             
         if not self.in_path and not os.path.isfile(self.binary):
@@ -260,6 +263,7 @@ class BasicRunSpec(object):
         for a in self.get_input_files():
             if not os.path.exists(a):
                 log.error("Input file '%s' does not exist [bin %s]" % (a, self.bid))
+                self.errors.add('missing-input')
                 return False
 
             # TODO: add AT_DIR ...
@@ -271,6 +275,8 @@ class BasicRunSpec(object):
 
     def run(self, runid, **kwargs):
         assert runid not in self._runids, "Duplicate runid %s" % (runid,)
+
+        assert len(self.errors) == 0
 
         x = Run(self.env, self.binary, self.args, self)
         if self.rlimit:

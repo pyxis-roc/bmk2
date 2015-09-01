@@ -124,6 +124,24 @@ def do_perf(args, rspecs):
 
                     break
 
+def check_rspecs(rspecs):
+    checks = []
+    out = []
+    all_ok = True
+
+    for rs in rspecs:
+        x = rs.check()
+        if not x:
+            if args.ignore_missing_binaries and len(rs.errors) == 1 and 'missing-binary' in rs.errors:
+                # do not add rs to out [and do not pass go.]
+                all_ok = False
+                continue
+
+        checks.append(x)
+        out.append(rs)
+
+    return all_ok, checks, out
+
 log = logging.getLogger(__name__)
 
 FAIL_LEVEL = logging.getLevelName("ERROR") + 1
@@ -145,7 +163,7 @@ p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specificatio
 p.add_argument("--bispec", dest="bispec", metavar="FILE_OR_MNEMONIC", help="Binary+Input specification")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
-
+p.add_argument("--ignore-missing-binaries", action="store_true", default = False)
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
 p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="cp_{rsid}_{runid}.log")
@@ -219,18 +237,22 @@ if not l.initialize(ftf): sys.exit(1)
 sel_inputs, sel_binaries = l.split_binputs(args.binputs)
 
 sys.path.append(args.metadir)
-if not l.load_multiple_binaries(binspecs, sel_binaries): sys.exit(1)
+if not l.load_multiple_binaries(binspecs, sel_binaries) and not args.ignore_missing_binaries: sys.exit(1)
 if not l.associate_inputs(sel_inputs): sys.exit(1)
 
 rspecs = l.get_run_specs()
 rspecs.sort(key=lambda x: x.bid)
-checks = [rs.check() for rs in rspecs]
+
+all_ok, checks, rspecs = check_rspecs(rspecs)
 
 if not all(checks):
     log.info("Some checks failed. See previous error messages for information.")
     sys.exit(1)
 
-log.info("Configuration loaded successfully.")
+if all_ok:
+    log.info("Configuration loaded successfully.")
+else:
+    log.info("Configuration loaded with some errors ignored. See previous error messages for information.")
 
 start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
