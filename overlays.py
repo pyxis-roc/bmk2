@@ -94,3 +94,16 @@ class NVProfOverlay(Overlay):
             log.log(self.collect, '{rsid} {runid} cuda/nvprof cuda_profile_0.log'.format(rsid=run.rspec.get_id(), runid=run.runid))
         
         return super(NVProfOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles, {'@profilecsv': logfile})
+
+class TmpDirOverlay(Overlay):
+    def __init__(self, tmpdir):
+        env = {'TMPDIR': tmpdir}
+        super(TmpDirOverlay, self).__init__(env)
+
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        return super(TmpDirOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
+
+def add_overlay(rspecs, overlay, *args, **kwargs):
+    for r in rspecs:
+        r.add_overlay(overlay(*args, **kwargs))

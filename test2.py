@@ -247,18 +247,18 @@ if args.cuda_profile:
     if cp_cfg_file:
         assert os.path.exists(cp_cfg_file) and os.path.isfile(cp_cfg_file), "CUDA Profiler Config '%s' does not exist or is not a file" % (cp_cfg_file,)
 
-    for r in rspecs:
-        r.add_overlay(overlays.CUDAProfilerOverlay(profile_cfg=cp_cfg_file, profile_log=cp_log_file))
+    overlays.add_overlay(rspecs, overlays.CUDAProfilerOverlay, profile_cfg=cp_cfg_file, profile_log=cp_log_file)
 elif args.nvprof:
-    #cp_cfg_file = args.cuda_profile_config or l.config.get_var("cp_cfg", None)
     cp_log_file = args.cuda_profile_log or l.config.get_var("cp_log", None)
+    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg="--metrics %s" % (args.nvp_metrics), profile_log=cp_log_file)
 
-    #if cp_cfg_file:
-    #    assert os.path.exists(cp_cfg_file) and os.path.isfile(cp_cfg_file), "CUDA Profiler Config '%s' does not exist or is not a file" % (cp_cfg_file,)
-
+tmpdir = l.config.get_var("tmpdir", None)
+if tmpdir: 
+    assert (os.path.exists(tmpdir) and os.path.isdir(tmpdir)), "Temporary directory '%s' does not exist or is not a directory" % (tmpdir,)
+    overlays.add_overlay(rspecs, overlays.TmpDirOverlay, tmpdir)
     for r in rspecs:
-        r.add_overlay(overlays.NVProfOverlay(profile_cfg="--metrics %s" % (args.nvp_metrics), profile_log=cp_log_file))
-    
+        r.set_tmpdir(tmpdir)
+
 rl = load_rlimits(l)
 
 for r in rspecs:

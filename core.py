@@ -125,6 +125,7 @@ class Run(object):
         self.stdout = ""
         self.stderr = ""
 
+        self.tmpdir = None
         self.tmpfiles = {}
         self.run_ok = False
         self.check_ok = False
@@ -137,6 +138,9 @@ class Run(object):
     def set_overlays(self, overlays):
         self.overlays = overlays
 
+    def set_tmpdir(self, tmpdir):
+        self.tmpdir = tmpdir
+
     def run(self, inherit_tmpfiles = None):
         assert self.retval == -1, "Can't use the same Run object twice"
 
@@ -147,8 +151,8 @@ class Run(object):
                 continue
 
             if aty == AT_TEMPORARY_OUTPUT:
-                th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id)
-                os.close(th)
+                th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id, dir=self.tmpdir)
+                os.close(th) # else files will continue to occupy space even after they are deleted
                 log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[a], a))
                 a = self.tmpfiles[a]
             elif aty == AT_TEMPORARY_INPUT:
@@ -203,6 +207,10 @@ class BasicRunSpec(object):
         self.overlays = []
         self._runids = set()
         self.rlimit = None
+        self.tmpdir = None
+
+    def set_tmpdir(self, tmpdir):
+        self.tmpdir = tmpdir
 
     def add_overlay(self, overlay):
         self.overlays.append(overlay)
@@ -269,6 +277,7 @@ class BasicRunSpec(object):
             x.set_popen_args('preexec_fn', self.rlimit.set)
 
         x.set_overlays(self.overlays)
+        x.set_tmpdir(self.tmpdir)
         x.runid = runid
         self._runids.add(runid)
         x.run(**kwargs)
