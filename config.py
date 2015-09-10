@@ -63,6 +63,8 @@ class Config(object):
         return self.files[ty]
         
     def _load_config(self):
+        self.cfg = None
+
         if not (os.path.exists(self.metadir) and os.path.isdir(self.metadir)):
             log.error("Metadir '%s' does not exist or is not a directory" % (self.metadir,))
             return False
@@ -89,6 +91,8 @@ class Config(object):
 
     def load_config(self):
         x = self.cfg
+        if not x:
+            return False
 
         for prop, ty in [("inpproc", FT_INPUTPROC),
                          ("inputdb", FT_INPUTDB),
