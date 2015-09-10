@@ -97,12 +97,21 @@ def write_cfg_file(cfgfile, basepath, entries):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Prepare an inputs database")
     p.add_argument("--glob", help="Glob")
+    p.add_argument("--update", action="store_true", help="Update dbfile")
     p.add_argument("inpproc", help="Input processor (python module)")
     p.add_argument("dbfile", help="Output database file")
     p.add_argument("basepath", nargs="?", help="Scan this path for inputs", default=".")
     
     args = p.parse_args()
     inpproc = common.load_py_module(args.inpproc)
+
+    existing_files = set()
+    if args.update:
+        idb = InputDB(args.dbfile, args.inpproc)
+        idb.load()
+        existing_files = [x.props.file for x in idb]
+        
+    print existing_files
 
     describe_input = inpproc['describe_input']
 
@@ -120,7 +129,15 @@ if __name__ == "__main__":
             x = describe_input(root, f, rp)
             if x:
                 x['file'] = os.path.join(rp, f)
-                out.append(x)
+                fp = os.path.join(basepath, x['file'])
 
-    write_cfg_file(dbfile, basepath, out)
+                if fp not in existing_files:
+                    print fp
+                    out.append(x)
+
+
+    if args.update:
+        write_cfg_file(dbfile + ".update", basepath, out)
+    else:
+        write_cfg_file(dbfile, basepath, out)
 
