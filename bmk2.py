@@ -12,13 +12,13 @@ from perf import *
 import logging
 log = logging.getLogger(__name__)
 
-def load_binary_specs(f):
+def load_binary_specs(f, binary_group = 'BINARIES'):
     g = load_py_module(f)
 
-    if 'BINARIES' in g:
-        return g['BINARIES']
+    if binary_group in g:
+        return g[binary_group]
     else:
-        log.error("No BINARIES in " + f)
+        log.error("No %s in %s" % (binary_group, f))
         return None
        
 class Loader(object):
@@ -70,15 +70,16 @@ class Loader(object):
 
         return inputs, bins            
 
-    def load_multiple_binaries(self, binspecs, sel_binaries = None):
+    def load_multiple_binaries(self, binspecs, sel_binaries = None, bingroup = "BINARIES"):
         for b in binspecs:
-            if not self.load_binaries(b, sel_binaries):
+            if not self.load_binaries(b, sel_binaries, bingroup):
                 return False
 
         return True
-    def load_binaries(self, binspec, sel_binaries = None):
+
+    def load_binaries(self, binspec, sel_binaries = None, bingroup = "BINARIES"):
         d = os.path.dirname(binspec)
-        binaries = load_binary_specs(binspec)
+        binaries = load_binary_specs(binspec, bingroup)
         if binaries:
             for b in binaries:
                 if b.get_id() in self.binaries:
@@ -95,7 +96,7 @@ class Loader(object):
             return True
         
         if not binaries or len(binaries) == 0:
-            log.error("BINARIES is empty in " + binspec)
+            log.error("%s is empty in %s" % (bingroup, binspec))
 
         return False
 

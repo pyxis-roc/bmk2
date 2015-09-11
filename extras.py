@@ -24,7 +24,7 @@ def summarize(log, rspecs):
 
     log.info('Summary: Runspecs: %s Binaries: %d Inputs: %d  Total runs: %d Failed: %d Failed Checks: %d' % (len(rspecs), len(bins), len(inputs), runs, failed_runs, failed_checks))
 
-def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False):
+def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES"):
     import bmk2
     import config
     import sys
@@ -58,7 +58,7 @@ def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ig
     sel_inputs, sel_binaries = l.split_binputs(binputs)
 
     sys.path.append(metadir)
-    if not l.load_multiple_binaries(binspecs, sel_binaries) and not ignore_missing_binaries: return False
+    if not l.load_multiple_binaries(binspecs, sel_binaries, bingroup) and not ignore_missing_binaries: return False
     if not l.associate_inputs(sel_inputs): return False
 
     return (basepath, binspecs, l)

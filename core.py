@@ -84,6 +84,24 @@ class Binary(object):
     def filter_inputs(self, inputs):
         raise NotImplementedError
 
+class Converter(Binary):
+    def get_run_spec(self, bmkinput):
+        x = BasicRunSpec()
+        x.set_binary('', 'convert', in_path = True)
+        x.set_arg(bmkinput.props.file, AT_INPUT_FILE)
+        x.set_arg(bmkinput.props.format, AT_OPAQUE)
+
+        alt = bmkinput.get_alt_format(self.format)
+
+        if alt:
+            x.set_arg(alt.props.file, AT_OUTPUT_FILE)
+            x.set_arg(alt.props.format, AT_OPAQUE)
+        else:
+            x.set_arg("@output", AT_OUTPUT_FILE)
+            x.set_arg(alt.props.format, AT_OPAQUE)
+
+        return x
+
 class Input(object):
     def __init__(self, props, db = None):
         self.props = Properties()
