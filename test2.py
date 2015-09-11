@@ -206,39 +206,15 @@ if args.log:
 else:
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)-10s %(message)s')
 
-
 if args.readlog:
     log.info('%d completed task rsids read from log' % (len(PREV_BINIDS)))
 
-if args.scan:
-    basepath = os.path.abspath(args.scan)
-    binspecs = scan(args.scan, "bmktest2.py")
+
+loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries)
+if not loaded:
+    sys.exit(1)
 else:
-    if not os.path.exists(args.binspec):
-        print >>sys.stderr, "Unable to find %s" % (args.binspec,)
-
-    basepath = os.path.abspath(".")
-    binspecs = [args.binspec]
-
-l = bmk2.Loader(args.metadir, args.inpproc)
-ftf = {}
-if args.bispec:
-    f = None
-    if os.path.exists(args.bispec) and os.path.isfile(args.bispec):
-        f = args.bispec
-    else:
-        f = l.config.get_var("bispec_" + args.bispec, None)
-        f = os.path.join(args.metadir, f)
-
-    assert f is not None, "Unable to find file or spec in config file for bispec '%s'" % (args.bispec,)
-    ftf[config.FT_BISPEC] = f
-
-if not l.initialize(ftf): sys.exit(1)
-sel_inputs, sel_binaries = l.split_binputs(args.binputs)
-
-sys.path.append(args.metadir)
-if not l.load_multiple_binaries(binspecs, sel_binaries) and not args.ignore_missing_binaries: sys.exit(1)
-if not l.associate_inputs(sel_inputs): sys.exit(1)
+    basepath, binspecs, l = loaded
 
 rspecs = l.get_run_specs()
 rspecs.sort(key=lambda x: x.bid)
