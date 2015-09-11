@@ -11,10 +11,9 @@ from core import Input
 from opdb import ObjectPropsCFG
 
 class InputDBcfg(ObjectPropsCFG):
-    def __init__(self, filename, inpproc = None, bt = None):
+    def __init__(self, filename, inpproc = None):
         super(InputDBcfg, self).__init__(filename, "bmktest2", ["2"])
         self.inpproc = inpproc
-        self.bt = bt
 
         self.unserialize_input = None
         self.serialize_input = None
@@ -31,9 +30,6 @@ class InputDBcfg(ObjectPropsCFG):
         self.meta = dict([('version', "2"), ('basepath', basepath)])
 
     def post_load(self):
-        if self.bt is not None:
-            self.bt.update(self.meta)
-
         basepath = self.meta['basepath']
 
         for s in self.objects:
@@ -41,7 +37,7 @@ class InputDBcfg(ObjectPropsCFG):
             if self.unserialize_input:
                 e = self.unserialize_input(e, basepath)
 
-                e['file'] = os.path.join(basepath, e['file'])
+            e['file'] = os.path.join(basepath, e['file'])            
 
         return True
 
@@ -50,19 +46,15 @@ class InputDBcfg(ObjectPropsCFG):
             self.serialize_input(section)
 
         if 'file' in section:
-            l = len(self.meta['basepath']) 
-            if section['file'][:l] == self.meta['basepath']:
-                section['file'] = section['file'][l+1:]
-
+            section['file'] = os.path.relpath(section['file'], self.meta['basepath'])
 
         return section
 
 class InputDB(object):
     def __init__(self, cfgfile, inpproc = None, inputprops = None):
-        self.cfg = cfgfile
         self.inpproc = inpproc
         self.inputprops = inputprops
-        self.inputdb_cfg = InputDBcfg(self.cfg, self.inpproc, {})
+        self.cfg = InputDBcfg(cfgfile, self.inpproc)
 
     def get_alt_format(self, name, fmt):
         if name in self.n2i:
@@ -71,24 +63,28 @@ class InputDB(object):
                     return x
 
     def load(self):
-        if not self.inputdb_cfg.load():
-            print >>sys.stderr, "Unable to load!"
+        if not self.cfg.load():
+            print >>sys.stderr, "Unable to load InputDB configuration!"
             return False
-
-        bt = self.inputdb_cfg.bt
 
         if self.inputprops is not None:
             # not .props as Properties!
-            self.props = inputprops.read_prop_file(self.inputprops, bt)
-            inputprops.apply_props(self.inputdb, self.props)
+            self.props = inputprops.InputPropsCfg(self.inputprops, self)
+            if not self.props.load():
+                print >>sys.stderr, "Unable to load InputProps"
+                return False
 
-        self.inputdb = [Input(i, self) for i in self.inputdb_cfg]
+            inputprops.apply_props(self.cfg.objects.itervalues(), self.props)
+
+        self.inputdb = [Input(i, self) for i in self.cfg]
         self.inpnames = set([i.get_id() for i in self.inputdb])
 
         self.n2i = dict([(n, list()) for n in self.inpnames])
         for i in self.inputdb:
             self.n2i[i.get_id()].append(i)
-
+        
+        return True
+            
     def __iter__(self):
         return iter(self.inputdb)
        
@@ -106,12 +102,12 @@ if __name__ == "__main__":
     if args.update:
         idb = InputDB(args.dbfile, args.inpproc)
         idb.load()
-        basepath = idb.inputdb_cfg.meta['basepath']
+        basepath = idb.cfg.meta['basepath']
         print >>sys.stderr, "using basepath from file: %s" % (basepath,)
     else:
         idb = InputDB(args.dbfile, args.inpproc)
         basepath = args.basepath
-        idb.inputdb_cfg.init(basepath)
+        idb.cfg.init(basepath)
 
     describe_input = inpproc['describe_input']
 
@@ -126,13 +122,13 @@ if __name__ == "__main__":
             x = describe_input(root, f, rp)
             if x:
                 x['file'] = os.path.join(rp, f)
-                if x['file'] not in idb.inputdb_cfg.objects:
+                if x['file'] not in idb.cfg.objects:
                     print >>sys.stderr, x['file']
-                    idb.inputdb_cfg.objects[x['file']] = x
+                    idb.cfg.objects[x['file']] = x
 
     if args.update:
         #TODO: check for basepath changes
-        idb.inputdb_cfg.save(args.dbfile + ".update")
+        idb.cfg.save(args.dbfile + ".update")
     else:
-        idb.inputdb_cfg.save(args.dbfile)
+        idb.cfg.save(args.dbfile)
 

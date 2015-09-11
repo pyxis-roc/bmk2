@@ -49,6 +49,8 @@ class ObjectPropsCFG(ObjectProps):
 
             v = cfg_get(x.get, self.fmt, "version")
 
+            self.version = v
+
             if not self.check_version(v):
                 av = [str(v) for v in self.acceptable_versions]
                 if v:

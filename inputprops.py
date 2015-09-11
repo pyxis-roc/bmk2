@@ -5,70 +5,73 @@ import inputdb
 import argparse
 import ConfigParser
 import os
+from opdb import ObjectPropsCFG
 
-def apply_props(inputdb, props):
-    for e in inputdb:
-        if e['name'] in props:
-            e.update(props[e['name']])
+class InputPropsCfg(ObjectPropsCFG):
+    def __init__(self, filename, inputdb):
+        super(InputPropsCfg, self).__init__(filename, "bmktest2-props", ["2"])
+        self.inputdb = inputdb
+        self.path_items = set()
 
-    return True
+    def init(self):
+        self.meta = {}
+        self.meta['version'] = "2"
 
-def read_prop_file(propfile, inputdb_bt):
-    x = ConfigParser.SafeConfigParser()
+    def post_load(self):
+        path_items = self.meta.get("paths", "")
+        self.path_items = set([xx.strip() for xx in path_items.split(",")])
 
-    basepath = inputdb_bt['basepath']
+        basepath = self.inputdb.cfg.meta['basepath']
 
-    out = []
-    with open(propfile, "rb") as f:
-        x.readfp(f)
-
-        v = x.getint("bmktest2-props", "version")
-        if v != 2:
-            printf >>sys.stderr, "Unknown version: %s" % (v,)
-            return None
-
-        try:
-            path_items = x.get("bmktest2-props", "paths")
-            path_items = set([xx.strip() for xx in path_items.split(",")])
-        except ConfigParser.NoOptionError:
-            path_items = set()
-        
-        for s in x.sections():
-            if s == "bmktest2-props": 
-                continue
-
-            e = dict(x.items(s))
-
-            for pi in path_items:
+        for e in self.objects.itervalues():
+            for pi in self.path_items:
                 if pi in e:
                     e[pi] = os.path.join(basepath, e[pi])
 
-            out.append((s, e)) # TODO: duplicate sections?
+        return True
 
-    return dict(out)    
+    def unparse_section(self, section):
+        bp = self.inputdb.cfg.meta['basepath']
+        for pi in self.path_items:
+            if pi in section:
+                section[pi] = os.path.relpath(section[pi], bp)
+
+        return section
+
+def apply_props(inputdb, props):
+    for e in inputdb:
+        if e['name'] in props.objects:
+            e.update(props.objects[e['name']])
+
+    return True
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser("Create an input properties file")
+    p = argparse.ArgumentParser("Create/Update an input properties file")
     p.add_argument("inputdb", help="Inputdb file")
     p.add_argument("inputprops", help="Inputprops file")
 
     args = p.parse_args()
 
-    names = set()
-    bt = {}
-    x = inputdb.read_cfg_file(args.inputdb, bmktest2 = bt)
-    cfg = ConfigParser.SafeConfigParser()
+    idb = inputdb.InputDB(args.inputdb)
+    ip = InputPropsCfg(args.inputprops, idb)
 
-    cfg.add_section('bmktest2-props')
-    cfg.set('bmktest2-props', 'version', bt['version'])
+    
+    if not idb.load():
+        print >>sys.stderr, "Failed to load inputdb"
+        sys.exit(1)
 
-    for e in x:
-        nm = e['name']
 
-        if nm not in names:
-            cfg.add_section(nm)
-            cfg.set(nm, "name", nm)
-            names.add(nm)
+    if os.path.exists(args.inputprops):
+        if not ip.load():
+            print >>sys.stderr, "Failed to load props"
+            sys.exit(1)
+    else:
+        ip.init()
 
-    with open(args.inputprops, "wb") as f:
-        cfg.write(f)
+    for e in idb:
+        nm = e.name
+
+        if nm not in ip.objects:
+            ip.objects[nm] = {'name':  nm}
+
+    ip.save(args.inputprops)

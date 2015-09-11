@@ -45,7 +45,9 @@ class Loader(object):
         self.inputdb = inputdb.InputDB(self.config.get_file(FT_INPUTDB), 
                                        self.config.get_file(FT_INPUTPROC),
                                        self.config.get_file(FT_INPUTPROPS))
-        self.inputdb.load()
+        if not self.inputdb.load():
+            return False
+
         self.bs = bispec.read_bin_input_spec(self.config.get_file(FT_BISPEC))
         self.bs.set_input_db(self.inputdb)
 
