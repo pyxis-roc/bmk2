@@ -15,6 +15,11 @@ def convert_direct(state, a, fmt_a, b, fmt_b):
         #print "no direct conversion"
         return False
 
+    if b is None:
+        b = conversions[(fmt_a, fmt_b)](a)
+        if b == a: 
+            return False
+
     if state.files[fmt_a] != a and state.existing[fmt_a] != a:
         #print "src does not exist"
         return False
@@ -33,7 +38,9 @@ def convert_from_existing(state, a, fmt_a, b, fmt_b):
         return [('convert_direct', a, fmt_a, b, fmt_b)]
 
     for f, e in state.existing.iteritems():
-        if state.files[f] is None:
+        if state.files[f] is None and f not in state.tried_existing:
+            state.tried_existing.add(f)
+            # exists but does not feature as a step
             return [('convert', e, f, b, fmt_b)]
 
     return False
@@ -62,12 +69,13 @@ def get_conversion(start, start_ty, end, end_ty, existing, verbose=0):
     # do we need existing?
     s.existing = {}
     s.files = {}
+    s.tried_existing = set()
 
     for f1, f2 in conversions.keys():
         s.files[f1] = None
         s.files[f2] = None
 
-    for k, v in existing.keys():
+    for k, v in existing.iteritems():
         s.existing[k] = v
 
     s.files[start_ty] = start

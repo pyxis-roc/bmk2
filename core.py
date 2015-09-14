@@ -91,6 +91,8 @@ class Converter(Binary):
         x.set_arg(bmkinput.props.file, AT_INPUT_FILE)
         x.set_arg(bmkinput.props.format, AT_OPAQUE)
 
+        x.bmk_input = bmkinput
+
         alt = bmkinput.get_alt_format(self.format)
 
         if alt:
@@ -114,6 +116,9 @@ class Input(object):
 
     def get_alt_format(self, fmt):
         return self.db.get_alt_format(self.name, fmt)
+
+    def get_all_alt(self):
+        return self.db.get_all_alt(self.name)
 
     def hasprop(self, prop):
         return hasattr(self.props, prop)

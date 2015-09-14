@@ -24,12 +24,14 @@ class ConvSpec(opdb.ObjectPropsCFG):
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)-8s %(name)-10s %(message)s')
 
-p = argparse.ArgumentParser("Run conversion binaries")
+p = argparse.ArgumentParser("Generate conversion makefile")
+p.add_argument("output", nargs="?", default="/dev/stdout")
 p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")
 p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor")
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
 p.add_argument("--bispec", dest="bispec", metavar="FILE_OR_MNEMONIC", help="Binary+Input specification")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
+p.add_argument("-v", dest="verbose", type=int, help="Verbosity", default=0)
 
 args = p.parse_args()
 
@@ -68,6 +70,16 @@ for rs in rspecs:
     src, srcty, dst, dstty = rs.args
     src, srcty, dst, dstty = src[0], srcty[0], dst[0], dstty[0]
 
+    exists = {}
+    for alt in rs.bmk_input.get_all_alt():
+        exists[alt.props.format] = alt.props.file
+
+    # might be useful for a copy?
+    if dstty in exists:
+        del exists[dstty]
+
+    #print exists
+
     if srcty not in all_types:
         log.error("Conversion from %s not supported" % (srcty,))
         sys.exit(1)
@@ -76,7 +88,10 @@ for rs in rspecs:
         log.error("Conversion to %s not supported" % (dstty,))
         sys.exit(1)
 
-    c = convgraph.get_conversion(src, srcty, dst, dstty, {})
+    if dst == "@output":
+        dst = None
+
+    c = convgraph.get_conversion(src, srcty, dst, dstty, exists, args.verbose)
     if not c:
         log.error("Conversion from %s to %s not supported" % (srcty, dstty))
         sys.exit(1)
@@ -89,7 +104,7 @@ for rs in rspecs:
             continue
 
         cmd = cs.objects[conv[(fsty, dsty)]]['cmd']
-        cmd = cmd.format(src = fs, dst=ds)
+        cmd = cmd.format(src = fs, dst=ds, verbose=1)
 
         targets.append(ds)
         out.append("""
@@ -97,6 +112,7 @@ for rs in rspecs:
 \t{cmd}""".format(src=fs, dst=ds, cmd=cmd))
 
 if len(targets):
-    print "all: %s" % (" ".join(targets))
-    print "\n".join(out)
-
+    f = open(args.output, "w")
+    print >>f, "all: %s" % (" ".join(targets))
+    print >>f, "\n".join(out)
+    f.close()

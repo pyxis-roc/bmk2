@@ -62,6 +62,10 @@ class InputDB(object):
                 if x.props.format == fmt:
                     return x
 
+    def get_all_alt(self, name):
+        if name in self.n2i:
+            return self.n2i[name]
+
     def load(self):
         if not self.cfg.load():
             print >>sys.stderr, "Unable to load InputDB configuration!"
