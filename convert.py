@@ -72,6 +72,10 @@ for rs in rspecs:
 
     exists = {}
     for alt in rs.bmk_input.get_all_alt():
+        if alt.props.format not in all_types:
+            log.error("Format '%s' not listed in convspec"%  (alt.props.format,))
+            sys.exit(1)
+
         exists[alt.props.format] = alt.props.file
 
     # might be useful for a copy?
