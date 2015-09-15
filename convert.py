@@ -76,11 +76,18 @@ for rs in rspecs:
             log.error("Format '%s' not listed in convspec"%  (alt.props.format,))
             sys.exit(1)
 
-        exists[alt.props.format] = alt.props.file
+        if os.path.exists(alt.props.file):
+            # sometimes alt.props.file may only exist in the database
+            exists[alt.props.format] = alt.props.file
 
     # might be useful for a copy?
     if dstty in exists:
         del exists[dstty]
+
+    if os.path.exists(dst):
+        # we're also abandoning any intermediate files ...
+        # TODO: the planner should do this...
+        continue
 
     #print exists
 
@@ -103,6 +110,7 @@ for rs in rspecs:
     for cmd, fs, fsty, ds, dsty in c:
         assert cmd == "convert_direct", "Unsupported: %s" % (cmd,)
         assert (fsty, dsty) in conv, "Planner got it wrong: %s -> %s unsupported" % (fst, dsty)
+        #print c
 
         if os.path.exists(ds):
             continue
@@ -110,10 +118,14 @@ for rs in rspecs:
         cmd = cs.objects[conv[(fsty, dsty)]]['cmd']
         cmd = cmd.format(src = fs, dst=ds, verbose=1)
 
-        targets.append(ds)
         out.append("""
 {dst}: {src}
 \t{cmd}""".format(src=fs, dst=ds, cmd=cmd))
+
+    if dst is None:
+        dst = c[-1][3]
+
+    targets.append(dst) # dst
 
 if len(targets):
     f = open(args.output, "w")
