@@ -107,6 +107,9 @@ for rs in rspecs:
         log.error("Conversion from %s to %s not supported" % (srcty, dstty))
         sys.exit(1)
 
+    if False:
+        print >>sys.stderr, c
+
     for cmd, fs, fsty, ds, dsty in c:
         assert cmd == "convert_direct", "Unsupported: %s" % (cmd,)
         assert (fsty, dsty) in conv, "Planner got it wrong: %s -> %s unsupported" % (fst, dsty)

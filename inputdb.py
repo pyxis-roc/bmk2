@@ -44,7 +44,7 @@ class InputDBcfg(ObjectPropsCFG):
     def unparse_section(self, section):
         if self.serialize_input:
             self.serialize_input(section)
-
+            
         if 'file' in section:
             section['file'] = os.path.relpath(section['file'], self.meta['basepath'])
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     if args.update:
         idb = InputDB(args.dbfile, args.inpproc)
         idb.load()
-        basepath = idb.cfg.meta['basepath']
+        basepath = idb.cfg.meta['basepath'] 
         print >>sys.stderr, "using basepath from file: %s" % (basepath,)
     else:
         idb = InputDB(args.dbfile, args.inpproc)
@@ -129,10 +129,10 @@ if __name__ == "__main__":
                 if x['file'] not in idb.cfg.objects:
                     print >>sys.stderr, x['file']
                     idb.cfg.objects[x['file']] = x
-
+                    x['file'] = os.path.join(basepath, x['file'])
+                    
     if args.update:
-        #TODO: check for basepath changes
-        idb.cfg.save(args.dbfile + ".update")
+        idb.cfg.save(args.dbfile)
     else:
         idb.cfg.save(args.dbfile)
 

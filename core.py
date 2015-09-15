@@ -96,11 +96,12 @@ class Converter(Binary):
         alt = bmkinput.get_alt_format(self.format)
 
         if alt:
+            # we allow this since converter will remove this later ...
             x.set_arg(alt.props.file, AT_OUTPUT_FILE)
-            x.set_arg(alt.props.format, AT_OPAQUE)
         else:
             x.set_arg("@output", AT_OUTPUT_FILE)
-            x.set_arg(alt.props.format, AT_OPAQUE)
+
+        x.set_arg(self.format, AT_OPAQUE)
 
         return x
 

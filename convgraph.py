@@ -15,11 +15,6 @@ def convert_direct(state, a, fmt_a, b, fmt_b):
         #print "no direct conversion"
         return False
 
-    if b is None:
-        b = conversions[(fmt_a, fmt_b)](a)
-        if b == a: 
-            return False
-
     if state.files[fmt_a] != a and state.existing[fmt_a] != a:
         #print "src does not exist"
         return False
@@ -35,6 +30,11 @@ declare_operators(convert_direct)
 
 def convert_from_existing(state, a, fmt_a, b, fmt_b):
     if (fmt_a, fmt_b) in conversions:        
+        if b is None:
+            b = conversions[(fmt_a, fmt_b)](a)
+            if b == a:
+                return False
+
         return [('convert_direct', a, fmt_a, b, fmt_b)]
 
     for f, e in state.existing.iteritems():
