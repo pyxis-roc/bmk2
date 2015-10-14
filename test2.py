@@ -166,10 +166,12 @@ p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
 p.add_argument("--ignore-missing-binaries", action="store_true", default = False)
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
-p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="cp_{rsid}_{runid}.log")
+p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="{xtitle}cp_{rsid}_{runid}.log")
 
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
+
+p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
@@ -237,6 +239,10 @@ log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
 
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
+
+if args.xtitle:
+    for rs in rspecs:
+        rs.vars['xtitle'] = args.xtitle
 
 if args.cuda_profile:
     cp_cfg_file = args.cuda_profile_config or l.config.get_var("cp_cfg", None)

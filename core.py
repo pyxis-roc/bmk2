@@ -23,6 +23,10 @@ def escape_for_filename(n):
     
 def create_log(ftemplate, run):
     v = {'runid': run.runid}
+    if 'xtitle' in run.rspec.vars:
+        v['xtitle'] = run.rspec.vars['xtitle']
+    else:
+        v['xtitle'] = ''
 
     if run.rspec: v['rsid'] = escape_for_filename(run.rspec.get_id())
 
@@ -232,6 +236,7 @@ class BasicRunSpec(object):
         self._runids = set()
         self.rlimit = None
         self.tmpdir = None
+        self.vars = {}
 
         self.errors = set()
 
@@ -327,8 +332,8 @@ class RunSpec(BasicRunSpec):
         super(RunSpec, self).__init__()
 
         self.bmk_binary = bmk_binary
-        self.bmk_input = bmk_input
-        
+        self.bmk_input = bmk_input        
+
         self.bid = self.bmk_binary.get_id()
         self.input_name = bmk_input.get_id()
         self.checker = None
