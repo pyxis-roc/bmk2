@@ -84,11 +84,6 @@ for rs in rspecs:
     if dstty in exists:
         del exists[dstty]
 
-    if os.path.exists(dst):
-        # we're also abandoning any intermediate files ...
-        # TODO: the planner should do this...
-        continue
-
     #print exists
 
     if srcty not in all_types:
@@ -102,6 +97,12 @@ for rs in rspecs:
     if dst == "@output":
         dst = None
 
+    # silently skip destinations that already exist in database and on disk
+    if dst and os.path.exists(dst):
+        # we're also abandoning any intermediate files ...
+        # TODO: the planner should do this...
+        continue
+
     c = convgraph.get_conversion(src, srcty, dst, dstty, exists, args.verbose)
     if not c:
         log.error("Conversion from %s to %s not supported" % (srcty, dstty))
@@ -109,6 +110,14 @@ for rs in rspecs:
 
     if False:
         print >>sys.stderr, c
+
+    if dst is None:
+        dst = c[-1][3]
+
+    # skip destinations that only exist on disk but not in database
+    if os.path.exists(dst):
+        log.info("Destination `%s' already exists, you need to update inputdb." % (dst,))
+        continue
 
     for cmd, fs, fsty, ds, dsty in c:
         assert cmd == "convert_direct", "Unsupported: %s" % (cmd,)
@@ -124,9 +133,6 @@ for rs in rspecs:
         out.append("""
 {dst}: {src}
 \t{cmd}""".format(src=fs, dst=ds, cmd=cmd))
-
-    if dst is None:
-        dst = c[-1][3]
 
     targets.append(dst) # dst
 
