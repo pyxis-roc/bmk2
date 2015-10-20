@@ -41,7 +41,7 @@ def average_data(key, raw_table, fields_to_avg):
         if len(xids) > 1:
             print >>sys.stderr, "Multiple XIDs for key '%s' in average_data: xid: %s" % (kv, group['xid'].iloc[0])
         
-        out = {'xids': [";".join(group['xid'])]}
+        out = {'xid': [group['xid'].iloc[0]]}
         
         for c in fields_to_avg:
             if c in group:
