@@ -2,6 +2,7 @@
 
 import ConfigParser
 import os
+import re
 
 def autolocate_config(start = None, fn = "bmk2ps.cfg"):
     if start is None:
@@ -37,6 +38,38 @@ class PSConfig(object):
             self._cfg.readfp(open(self.cfg, "r"))
         else:
             self._cfg.set('bmk2ps', 'ver', '2')
+
+        self._key = None
+        self._binid_re = None
+
+    def get_binid_re(self):
+        if self._binid_re:
+            return self._binid_re
+
+        binid_re = self.get('import', 'binid_decompose')
+        if binid_re:
+            self._binid_re = re.compile(binid_re)
+            
+        return self._binid_re
+
+    def get_key(self):
+        if self._key:
+            return self._key
+        
+        k = self.get('data', 'key')
+        if k is None:
+            binid_re = self.get_binid_re()
+            if binid_re:
+                k = sorted(binid_re.groupindex.iteritems(), key=lambda x: x[1])
+                k = [kk[0] for k in k]
+        else:
+            k = [kk.strip() for kk in k.split(",")]
+
+        if k is None:
+            k = ['binid']
+
+        self._key = k
+        return self._key
 
     def version(self):
         return self.get('bmk2ps', 'ver')

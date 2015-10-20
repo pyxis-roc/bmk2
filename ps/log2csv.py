@@ -44,10 +44,9 @@ if args.experiment:
     mix['experiment'] = args.experiment
 
 
-binid_re = cfg.get('import', 'binid_decompose')
+binid_re = cfg.get_binid_re()
 
 if binid_re:
-    binid_re = re.compile(binid_re)
     hdr = sorted(binid_re.groupindex.iteritems(), key=lambda x: x[1])
     hdr = [h[0] for h in hdr]
 else:
