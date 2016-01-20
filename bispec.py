@@ -45,6 +45,9 @@ class BinInputSpecV1(object):
         out = []
         for l in ff:
             l = l.strip()
+
+            if not l: continue
+                
             if l[0] == "#":
                 continue
 
