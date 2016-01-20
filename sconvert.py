@@ -47,7 +47,7 @@ def init_convgraph(cs):
     return all_types, conv
 
 
-def convert_one(src, srcty, dst, dstty, all_types, conv, exists = None):
+def convert_one(cs, src, srcty, dst, dstty, all_types, conv, exists = None, verbose = 0):
     if exists is None:
         exists = {}
 
@@ -79,7 +79,7 @@ def convert_one(src, srcty, dst, dstty, all_types, conv, exists = None):
         log.info("Destination `%s' already exists and is in database, not converting" % (dst,))
         return None
     
-    c = convgraph.get_conversion(src, srcty, dst, dstty, exists, args.verbose)
+    c = convgraph.get_conversion(src, srcty, dst, dstty, exists, verbose)
     if not c:
         log.error("Unable to plan conversion from %s to %s" % (srcty, dstty))
         return None
@@ -93,7 +93,7 @@ def convert_one(src, srcty, dst, dstty, all_types, conv, exists = None):
 
     # skip destinations that only exist on disk but not in database
     if os.path.exists(dst):
-        log.info("Destination `%s' already exists, not converting. But it not in database, you need to update inputdb." % (dst,))
+        log.info("Destination `%s' already exists, not converting. But it is not in database, you need to update inputdb." % (dst,))
         return None
 
     out = []
@@ -121,7 +121,7 @@ def to_makefile(f, dst_rule_array):
         for rule in rules:
             nout.append("""
 {dst}: {src}
-    \t{cmd}""".format(src=rule[1], dst=rule[0], cmd=rule[2]))
+\t{cmd}""".format(src=rule[1], dst=rule[0], cmd=rule[2]))
 
 
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         sys.exit(1)
         
     all_types, conv = init_convgraph(cs)
-    cmds = convert_one(args.input, args.input_type, args.dst, args.dst_type, all_types, conv)
+    cmds = convert_one(cs, args.input, args.input_type, args.dst, args.dst_type, all_types, conv)
     if cmds is None:
         sys.exit(1)
 
