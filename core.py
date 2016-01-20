@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import logging
 import resource
+import re
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ AT_TEMPORARY_OUTPUT = 3
 AT_INPUT_FILE_IMPLICIT = 4
 AT_TEMPORARY_INPUT = 5
 AT_LOG = 6
+
+placeholder_re = re.compile(r'(@[A-Za-z0-9_]+)') # may need delimiters?
 
 def escape_for_filename(n):
     return n.replace("/", "_").replace(".", "")
@@ -179,10 +182,14 @@ class Run(object):
                 continue
 
             if aty == AT_TEMPORARY_OUTPUT:
-                th, self.tmpfiles[a] = tempfile.mkstemp(prefix="test-" + self.bin_id, dir=self.tmpdir)
+                km = placeholder_re.search(a)
+                assert km is not None
+                k = km.group(1) # this should really be folded into the argtype itself...
+
+                th, self.tmpfiles[k] = tempfile.mkstemp(prefix="test-" + self.bin_id, dir=self.tmpdir)
                 os.close(th) # else files will continue to occupy space even after they are deleted
-                log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[a], a))
-                a = self.tmpfiles[a]
+                log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[k], k))
+                a = a.replace(k, self.tmpfiles[k])
             elif aty == AT_TEMPORARY_INPUT:
                 a = inherit_tmpfiles[a]
 
