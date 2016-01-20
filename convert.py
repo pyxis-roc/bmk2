@@ -57,7 +57,7 @@ for rs in rspecs:
             # sometimes alt.props.file may only exist in the database
             exists[alt.props.format] = alt.props.file
             
-    cmds = sconvert.convert_one(src, srcty, dst, dstty, all_types, conv, exists)
+    cmds = sconvert.convert_one(cs, src, srcty, dst, dstty, all_types, conv, exists, args.verbose)
     if cmds is None:
         continue
 
@@ -65,5 +65,5 @@ for rs in rspecs:
 
 if len(out):
     f = open(args.output, "w")
-    sconvert.to_makefile(out)
+    sconvert.to_makefile(f, out)
     f.close()
