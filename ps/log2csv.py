@@ -126,4 +126,8 @@ ocsv = csv.DictWriter(open(args.output, "w"), fieldnames)
 ocsv.writeheader()
 ocsv.writerows(rows)
 
+if len(rows) == 0:
+    print >>sys.stderr, "WARNING: Log file did not contain perf numbers!"
+    sys.exit(1)
+
 print >>sys.stderr, "Total time for experiment (h:m:s)", total_time

@@ -31,6 +31,16 @@ if common_keys != set():
     
 t = pd.read_csv(args.input)
 b = pd.read_csv(args.base)
+
+if len(t) == 0:
+    print >>sys.stderr, "ERROR: %s does not contain any records" % (args.input,)
+    sys.exit(1)
+
+if len(b) == 0:
+    print >>sys.stderr, "ERROR: %s does not contain any records" % (args.base,)
+    sys.exit(1)
+
+
 #print b[args.key + [args.metric] + args.right_keys]
 m = t.merge(b[args.key + [args.metric] + args.right_keys], 'left', on=args.key, suffixes=('', args.right_suffix))
 m[args.metric + "_norm"] = m[args.metric] / m[args.metric + "_right"]

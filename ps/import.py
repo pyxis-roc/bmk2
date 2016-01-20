@@ -80,5 +80,7 @@ if check_raw_data(t):
 
     x = average_data(key, t, ['time_ns'])
     x.to_csv(args.output, reset_index=True)
-
+    if len(x) == 0:
+        print >>sys.stderr, "WARNING: No records were imported!"
+        sys.exit(1)
 
