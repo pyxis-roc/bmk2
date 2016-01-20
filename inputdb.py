@@ -123,6 +123,9 @@ if __name__ == "__main__":
             filenames = fnmatch.filter(filenames, args.glob)       
 
         for f in filenames:
+            if f[0] == ".":
+                continue
+
             x = describe_input(root, f, rp)
             if x:
                 x['file'] = os.path.join(rp, f)
