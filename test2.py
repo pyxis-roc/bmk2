@@ -170,6 +170,7 @@ p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="C
 
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
+p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
 
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 
@@ -190,6 +191,8 @@ pperf = sp.add_parser('perf', help="Run performance tests")
 pperf.add_argument('binputs', nargs='*', help="List of binaries and/or inputs to execute")
 pperf.add_argument('--ff', dest="fail_fast", action="store_true", help="Fail fast", default=False)
 pperf.add_argument('-r', dest="repeat", metavar="N", type=int, help="Number of repetitions", default=3)
+
+cmd_line = " ".join(sys.argv)
 
 args = p.parse_args()
 
@@ -236,6 +239,7 @@ start = datetime.datetime.now()
 log.info("SYSTEM: %s" % (",".join(os.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
+log.info("CMD_LINE: %s" % (cmd_line))
 
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
@@ -254,7 +258,19 @@ if args.cuda_profile:
     overlays.add_overlay(rspecs, overlays.CUDAProfilerOverlay, profile_cfg=cp_cfg_file, profile_log=cp_log_file)
 elif args.nvprof:
     cp_log_file = args.cuda_profile_log or l.config.get_var("cp_log", None)
-    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg="--metrics %s" % (args.nvp_metrics), profile_log=cp_log_file)
+    cfg = ""
+    metrics = []
+    if args.nvp_metrics:
+        metrics.extend(args.nvp_metrics)
+
+    if args.nvp_metric_files:
+        nvpdir = l.config.get_var("nvprof_dir", args.metadir)
+        files = [os.path.join(nvpdir, a) for a in args.nvp_metric_files.split(",")]
+        metrics.extend(read_line_terminated_cfg(files))
+                   
+    cfg = "--metrics %s" % (",".join(metrics),)
+        
+    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file)
 
 tmpdir = l.config.get_var("tmpdir", None)
 if tmpdir: 
