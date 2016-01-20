@@ -1,6 +1,15 @@
 import os
 import fnmatch
 
+def read_line_terminated_cfg(configs):
+    out = []
+    for f in configs:
+        fl = [s.strip() for s in open(f, "r")]
+        fl = [l for l in fl if (l and l[0] != "#")]
+        out += fl
+
+    return out
+
 def scan(path, glob):
     out = []
     for root, dirnames, filenames in os.walk(path):
