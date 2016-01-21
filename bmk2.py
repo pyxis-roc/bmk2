@@ -1,3 +1,14 @@
+#
+# bmk2.py
+#
+# Loader for bmk2 tests.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
+
 import sys
 from common import *
 from config import *

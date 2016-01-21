@@ -1,3 +1,15 @@
+#
+# opdb.py
+#
+# Object properties database for bmk2.  Sections in CFG files indicate
+# objects, section keys indicate properties.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
+
 import ConfigParser
 from collections import OrderedDict
 

@@ -1,3 +1,14 @@
+#
+# perf.py
+#
+# Performance number extractor for bmk2.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
+
 import re
 import logging
 log = logging.getLogger(__name__)

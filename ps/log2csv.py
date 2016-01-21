@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+# log2csv.py
+#
+# Converts bmk2 perf log files into csv files, part of bmk2/ps.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
 
 import csv
 import sys

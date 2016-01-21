@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+# sconvert.py
+#
+# Simple converter for bmk2.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
 
 import convgraph
 import re
@@ -141,7 +151,7 @@ if __name__ == '__main__':
     p.add_argument("input", help="Input file")
     p.add_argument("input_type", help="Input file type")
     p.add_argument("dst_type", help="Destination file type (name will be autodetermined)")
-    p.add_argument("dst", nargs="?", help="Destintation file name (optional)")
+    p.add_argument("dst", nargs="?", help="Destination file name (optional)")
 
     p.add_argument("-o", dest="output", metavar="FILE", help="Output makefile", default="/dev/stdout")
     p.add_argument("-d", dest="metadir", metavar="PATH", help="Path to load configuration from", default=".")

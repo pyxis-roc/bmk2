@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+# inputprops.py
+#
+# Manages an input properties file (*.inputprops)
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
 
 import sys
 import inputdb

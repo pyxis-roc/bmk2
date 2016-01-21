@@ -1,3 +1,14 @@
+#
+# checkers.py
+#
+# Checkers available for tests in bmk2.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
+
 from core import Run, AT_OPAQUE
 import re
 import logging

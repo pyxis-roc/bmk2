@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+# inputdb.py
+#
+# Manages input db files for bmk2 (*.inputdb)
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
 
 import sys
 import os

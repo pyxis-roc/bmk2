@@ -1,4 +1,15 @@
 #!/usr/bin/env python
+#
+# import.py
+#
+# Converts a raw CSV file into a performance file, mostly by
+# averaging, part of bmk2/ps.
+#
+# Copyright (c) 2015, 2016 The University of Texas at Austin
+#
+# Author: Sreepathi Pai <sreepai@ices.utexas.edu>
+#
+# Intended to be licensed under GPL3
 
 import sys
 import argparse
