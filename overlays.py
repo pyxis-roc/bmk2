@@ -114,6 +114,18 @@ class TmpDirOverlay(Overlay):
     def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
         return super(TmpDirOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
+class Bmk2RTEnvOverlay(Overlay):
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        self.env['BMK2'] = "1"
+        if isinstance(run.rspec, core.RunSpec):
+            self.env['BMK2_BINID'] = run.rspec.bid
+            self.env['BMK2_INPUTID'] = run.rspec.input_name
+
+        if run.runid is not None:
+            self.env['BMK2_RUNID'] = run.runid
+
+        return super(Bmk2RTEnvOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
 
 def add_overlay(rspecs, overlay, *args, **kwargs):
     for r in rspecs:

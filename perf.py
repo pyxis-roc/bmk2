@@ -79,12 +79,12 @@ class PerfRE(object):
             m = MULTIPLIERS[self.units]
 
             l = len(str(m)) - len(gd['frac'])
-            print l
+            #print l
             assert l > 0, l
 
             time_ns = w * m + f * (10**(l-1))
         else:
-            assert False, gd
+            assert False, "Unable to located named groups in perf regex (%s)" % (gd,)
 
         return {'time_ns': time_ns}
 

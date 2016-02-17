@@ -271,14 +271,17 @@ elif args.nvprof:
     cfg = ""
     metrics = []
     if args.nvp_metrics:
-        metrics.extend(args.nvp_metrics)
+        metrics.extend(args.nvp_metrics.split(","))
 
     if args.nvp_metric_files:
         nvpdir = l.config.get_var("nvprof_dir", args.metadir)
         files = [os.path.join(nvpdir, a) for a in args.nvp_metric_files.split(",")]
         metrics.extend(read_line_terminated_cfg(files))
-                   
-    cfg = "--metrics %s" % (",".join(metrics),)
+                
+    if len(metrics):
+        cfg = "--metrics %s" % (",".join(metrics),)
+    else:
+        cfg = ""
         
     overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file)
 
@@ -288,6 +291,8 @@ if tmpdir:
     overlays.add_overlay(rspecs, overlays.TmpDirOverlay, tmpdir)
     for r in rspecs:
         r.set_tmpdir(tmpdir)
+
+overlays.add_overlay(rspecs, overlays.Bmk2RTEnvOverlay)
 
 rl = load_rlimits(l)
 
