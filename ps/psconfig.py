@@ -47,6 +47,7 @@ class PSConfig(object):
         if self.cfg:
             self._cfg.readfp(open(self.cfg, "r"))
         else:
+            self._cfg.add_section('bmk2ps')
             self._cfg.set('bmk2ps', 'ver', '2')
 
         self._key = None
@@ -76,7 +77,7 @@ class PSConfig(object):
             k = [kk.strip() for kk in k.split(",")]
 
         if k is None:
-            k = ['binid']
+            k = ['binid', 'input']
 
         self._key = k
         return self._key

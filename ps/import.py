@@ -74,6 +74,8 @@ parser = argparse.ArgumentParser(description="Import raw performance data")
 
 parser.add_argument("input", help="Input file")
 
+parser.add_argument("-a", dest="avg_fields", metavar="FIELD", action="append", default=[], help="Average FIELD")
+
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
 
@@ -84,12 +86,16 @@ key = ['experiment'] + cfg.get_key()
 t.sort_values(by=key, inplace=True)
 
 if check_raw_data(t):
-    avg_fields = cfg.get('import', 'average', None)
-    if avg_fields is None:
+    avg_fields = cfg.get('import', 'average', [])
+    if len(avg_fields) == 0 and len(args.avg_fields) == 0:
         print >>sys.stderr, "Could not find list of fields to average (import.average) in configuration"
+        print >>sys.stderr, "Use -a to specify fields on command line"
         sys.exit(1)
 
-    x = average_data(key, t, ['time_ns'])
+    if len(args.avg_fields):
+        avg_fields += args.avg_fields
+
+    x = average_data(key, t, avg_fields)
     x.to_csv(args.output, reset_index=True)
     if len(x) == 0:
         print >>sys.stderr, "WARNING: No records were imported!"

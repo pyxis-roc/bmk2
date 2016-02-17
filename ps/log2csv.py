@@ -60,7 +60,8 @@ if binid_re:
     hdr = sorted(binid_re.groupindex.iteritems(), key=lambda x: x[1])
     hdr = [h[0] for h in hdr]
 else:
-    hdr = ["binid"]
+    binid_re = re.compile(r"(?P<binid>.+)/(?P<input>[^/]+)")
+    hdr = ["binid", "input"]
 
 START_DATE = None
 END_DATE = None
