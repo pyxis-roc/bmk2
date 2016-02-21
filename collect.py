@@ -92,8 +92,8 @@ if __name__ == "__main__":
                 elif len(args.filetype) == 0:
                     af, ao = add_names(fnames, basepath, colfiles[rsid][runid][ft], out)
 
-                for f in af:
-                    revmap[f] = (rsid, runid, ft)
+                for f, ff in zip(af, ao):
+                    revmap[f] = (rsid, runid, ft, ff)
                 
     assert len(fnames) == len(out)
     print "\n".join(out)
@@ -103,5 +103,5 @@ if __name__ == "__main__":
         if mapfile:
             for fn in fnames:
                 x = revmap[fn]
-                print >>mapfile, "%s %s %s %s" % (x[0], x[1], x[2], fn)
+                print >>mapfile, "%s %s %s %s %s" % (x[0], x[1], x[2], fn, x[3])
 
