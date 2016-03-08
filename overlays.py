@@ -82,14 +82,19 @@ class CUDAProfilerOverlay(Overlay):
         return super(CUDAProfilerOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 class NVProfOverlay(Overlay):
-    def __init__(self, profile_cfg = None, profile_log = None):
+    def __init__(self, profile_cfg = None, profile_log = None, profile_db = False):
         args = [(x, core.AT_OPAQUE) for x in profile_cfg.strip().split()]
-        args += [(x, core.AT_OPAQUE) for x in "--csv --print-gpu-trace".split()]
-        args += [('--log-file', core.AT_OPAQUE), ('@profilecsv', core.AT_LOG)]
+        
+        if profile_db:
+            args += [('-o', core.AT_OPAQUE), ('@nvprofile', core.AT_LOG)]
+        else:
+            args += [(x, core.AT_OPAQUE) for x in "--csv --print-gpu-trace".split()]
+            args += [('--log-file', core.AT_OPAQUE), ('@nvprofile', core.AT_LOG)]
 
         self.profile_cfg = profile_cfg
         self.profile_log = profile_log
-        
+        self.profile_db = profile_db
+
         self.collect = logging.getLevelName('COLLECT')
         super(NVProfOverlay, self).__init__(binary="nvprof", args=args)
 
@@ -97,14 +102,14 @@ class NVProfOverlay(Overlay):
         if self.profile_log is not None:
             logfile = core.create_log(self.profile_log, run)
         else:
-            logfile = 'cuda_profile_0.log'
+            if self.profile_db:
+                logfile = 'cuda_profile_0.nvprof'
+            else:
+                logfile = 'cuda_profile_0.log'
 
-        if self.profile_log:
-            log.log(self.collect, '{rsid} {runid} cuda/nvprof {logfile}'.format(rsid=run.rspec.get_id(), runid=run.runid, logfile=logfile))
-        else:
-            log.log(self.collect, '{rsid} {runid} cuda/nvprof cuda_profile_0.log'.format(rsid=run.rspec.get_id(), runid=run.runid))
+        log.log(self.collect, '{rsid} {runid} cuda/nvprof {logfile}'.format(rsid=run.rspec.get_id(), runid=run.runid, logfile=logfile))
         
-        return super(NVProfOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles, {'@profilecsv': logfile})
+        return super(NVProfOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles, {'@nvprofile': logfile})
 
 class TmpDirOverlay(Overlay):
     def __init__(self, tmpdir):

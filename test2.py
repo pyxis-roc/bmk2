@@ -181,6 +181,7 @@ p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="C
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
+p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a profile database instead of a CSV")
 
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 
@@ -282,8 +283,11 @@ elif args.nvprof:
         cfg = "--metrics %s" % (",".join(metrics),)
     else:
         cfg = ""
+
+    if args.npdb:
+        cp_log_file = cp_log_file.replace(".log", ".nvprof")
         
-    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file)
+    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file, profile_db = args.npdb)
 
 tmpdir = l.config.get_var("tmpdir", None)
 if tmpdir: 
