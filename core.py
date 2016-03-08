@@ -47,7 +47,31 @@ def create_log(ftemplate, run):
     complete = os.path.join(os.path.dirname(run.binary), ftemplate.format(**v))
     return complete
 
-def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}): 
+def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
+    output = None
+    error = None
+    
+    stdouth = subprocess.PIPE if stdout else None
+    stderrh = subprocess.PIPE if stderr else None
+    
+    try:
+        proc = subprocess.Popen(cmd, stdout=stdouth, stderr=stderrh, env = env, **popen_args)
+        output, error = proc.communicate()
+
+        if proc.returncode != 0:
+            log.error("Execute failed (%d): " % (proc.returncode,) + " ".join(cmd))
+            rv = proc.returncode
+        else:
+            rv = 0
+    except OSError as e:
+        #print >>sys.stderr, "Execute failed: (%d: %s) "  % (e.errno, e.strerror) + " ".join(cmd)
+        log.error("Execute failed (OSError %d '%s'): "  % (e.errno, e.strerror) + " ".join(cmd))
+        output = e.strerror
+        rv = e.errno
+
+    return (rv, output, error)
+
+def run_command_old(cmd, stdout = True, stderr = True, env = None, popen_args = {}): 
     if stderr:
         stdout = True
         stderrh = subprocess.STDOUT
