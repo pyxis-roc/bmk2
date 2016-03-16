@@ -43,7 +43,7 @@ class PSConfig(object):
             self.cfg = autolocate_config()
 
         self._cfg = ConfigParser.SafeConfigParser()
-
+        
         if self.cfg:
             self._cfg.readfp(open(self.cfg, "r"))
         else:
@@ -52,6 +52,7 @@ class PSConfig(object):
 
         self._key = None
         self._binid_re = None
+        self._avg_fields = None
 
     def get_binid_re(self):
         if self._binid_re:
@@ -72,7 +73,7 @@ class PSConfig(object):
             binid_re = self.get_binid_re()
             if binid_re:
                 k = sorted(binid_re.groupindex.iteritems(), key=lambda x: x[1])
-                k = [kk[0] for k in k]
+                k = [kk[0] for kk in k]
         else:
             k = [kk.strip() for kk in k.split(",")]
 
@@ -82,8 +83,24 @@ class PSConfig(object):
         self._key = k
         return self._key
 
+    def get_average_fields(self):
+        if self._avg_fields:
+            return self._avg_fields
+
+        self._avg_fields = self.get_csl('import', 'average', [])
+        return self._avg_fields
+        
+
     def version(self):
         return self.get('bmk2ps', 'ver')
+
+    def get_csl(self, section, var, default = None):
+        v = self.get(section, var, None)
+
+        if v is None:
+            return default
+        else:
+            return [vv.strip() for vv in v.split(",")]        
 
     def get(self, section, var, default = None):
         try:

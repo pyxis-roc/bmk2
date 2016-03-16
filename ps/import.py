@@ -86,7 +86,7 @@ key = ['experiment'] + cfg.get_key()
 t.sort_values(by=key, inplace=True)
 
 if check_raw_data(t):
-    avg_fields = cfg.get('import', 'average', [])
+    avg_fields = cfg.get_average_fields()
     if len(avg_fields) == 0 and len(args.avg_fields) == 0:
         print >>sys.stderr, "Could not find list of fields to average (import.average) in configuration"
         print >>sys.stderr, "Use -a to specify fields on command line"
