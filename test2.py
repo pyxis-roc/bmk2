@@ -189,6 +189,8 @@ p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
 
+p.add_argument("--retrace", dest="retrace", metavar="FILE", help="Read map file FILE and rerun traces")
+
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
 plist.add_argument('binputs', nargs='*', help="Limit to binaries and/or inputs")
@@ -297,6 +299,9 @@ if tmpdir:
         r.set_tmpdir(tmpdir)
 
 overlays.add_overlay(rspecs, overlays.Bmk2RTEnvOverlay)
+
+if args.retrace:
+    overlays.add_overlay(rspecs, overlays.GGCInstrOverlay, args.retrace)
 
 rl = load_rlimits(l)
 

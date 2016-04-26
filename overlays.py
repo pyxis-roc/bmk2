@@ -132,6 +132,38 @@ class Bmk2RTEnvOverlay(Overlay):
         return super(Bmk2RTEnvOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 
+_instr_overlay_file = {}
+
+class GGCInstrOverlay(Overlay):
+    @staticmethod
+    def read_map_file(mapfile):
+        out = {}
+        f = open(mapfile, "r")
+        for l in f:
+            ls = l.strip().split(' ', 4)
+            bmkinput, uniqid, ty, fn, p = ls
+
+            if ty == "ggc/kstate" and bmkinput not in out:
+                out[bmkinput] = uniqid
+
+        f.close()
+
+        return out
+
+    def __init__(self, mapfile):        
+        if mapfile not in _instr_overlay_file:
+            _instr_overlay_file[mapfile] = GGCInstrOverlay.read_map_file(mapfile)
+            
+        self.mapfile = _instr_overlay_file[mapfile]
+        super(GGCInstrOverlay, self).__init__()
+    
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        if run.rspec.get_id() in self.mapfile:
+            self.env['INSTR_UNIQID'] = self.mapfile[run.rspec.get_id()]
+
+        return super(GGCInstrOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
+
 def add_overlay(rspecs, overlay, *args, **kwargs):
     for r in rspecs:
         r.add_overlay(overlay(*args, **kwargs))
