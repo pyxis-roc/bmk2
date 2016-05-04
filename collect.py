@@ -17,8 +17,11 @@ import logproc
 import argparse
 import os
 
-def build_collect_list(logfile):
+def build_collect_list(logfile, skip_failed = True):
     out = {}
+    last_runid = {}
+    failed_runids = set()
+
     basepath = ""
     for r in logproc.parse_log_file(logfile):
         if r.type == "COLLECT":
@@ -30,6 +33,8 @@ def build_collect_list(logfile):
 
                 if r.runid not in out[r.rsid]:
                     out[r.rsid][r.runid] = {}
+
+                last_runid[r.rsid] = r.runid
 
                 if r.filetype not in out[r.rsid][r.runid]:
                     out[r.rsid][r.runid][r.filetype] = []
@@ -48,6 +53,11 @@ def build_collect_list(logfile):
                     n = n + args.suffix
 
                 out[r.rsid][r.runid][r.filetype].append(n)
+        elif r.type == "FAIL":
+            if "run failed" in r.message: # not robust!
+                if r.binid in last_runid:
+                    if skip_failed:
+                        del out[r.binid][last_runid[r.binid]]
 
     return basepath, out
 
@@ -78,9 +88,11 @@ if __name__ == "__main__":
     parser.add_argument('-p', dest="strip_path", type=int, metavar='NUM', help='Strip NUM components from filename before combining with basepath', default=0)
     parser.add_argument('-m', dest="map", metavar='FILE', help='Store map of RSID, file and filetype in FILE', default=None)
     parser.add_argument('-s', dest="suffix", metavar='SUFFIX', help='Add suffix to filename', default=0)
+    parser.add_argument('--collect-failed', dest="skip_failed", action="store_false", default=True, help='Collect files from failed runs')
+
     args = parser.parse_args()
 
-    basepath, colfiles = build_collect_list(args.logfile)
+    basepath, colfiles = build_collect_list(args.logfile, args.skip_failed)
     out = []
     fnames = set()
     revmap = {}

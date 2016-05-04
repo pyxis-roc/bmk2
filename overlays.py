@@ -11,6 +11,7 @@
 
 import core
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -82,18 +83,20 @@ class CUDAProfilerOverlay(Overlay):
         return super(CUDAProfilerOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 class NVProfOverlay(Overlay):
-    def __init__(self, profile_cfg = None, profile_log = None, profile_db = False):
+    def __init__(self, profile_cfg = None, profile_log = None, profile_db = False, profile_analysis = False):
         args = [(x, core.AT_OPAQUE) for x in profile_cfg.strip().split()]
         
-        if profile_db:
+        if profile_db or profile_analysis:
             args += [('-o', core.AT_OPAQUE), ('@nvprofile', core.AT_LOG)]
+            if profile_analysis:
+                args += [('--analysis-metrics', core.AT_OPAQUE)]
         else:
             args += [(x, core.AT_OPAQUE) for x in "--csv --print-gpu-trace".split()]
             args += [('--log-file', core.AT_OPAQUE), ('@nvprofile', core.AT_LOG)]
 
         self.profile_cfg = profile_cfg
         self.profile_log = profile_log
-        self.profile_db = profile_db
+        self.profile_db = profile_db or profile_analysis
 
         self.collect = logging.getLevelName('COLLECT')
         super(NVProfOverlay, self).__init__(binary="nvprof", args=args)
@@ -144,7 +147,7 @@ class GGCInstrOverlay(Overlay):
             bmkinput, uniqid, ty, fn, p = ls
 
             if ty == "ggc/kstate" and bmkinput not in out:
-                out[bmkinput] = uniqid
+                out[bmkinput] = (uniqid, os.path.dirname(p))
 
         f.close()
 
@@ -159,7 +162,10 @@ class GGCInstrOverlay(Overlay):
     
     def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
         if run.rspec.get_id() in self.mapfile:
-            self.env['INSTR_UNIQID'] = self.mapfile[run.rspec.get_id()]
+            uid, dirname = self.mapfile[run.rspec.get_id()]
+
+            self.env['INSTR_UNIQID'] = uid
+            self.env['INSTR_TRACE_DIR'] = dirname + "/"
 
         return super(GGCInstrOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 

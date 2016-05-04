@@ -26,6 +26,11 @@ import resource
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
+if hasattr(time, 'monotonic'):
+    time_fn = time.monotonic
+else:
+    time_fn = time.time
+
 def load_rlimits(lo):
     x = core.RLimit()
     rlimit_cpu = lo.config.get_var("rlimit.cpu", None)
@@ -80,12 +85,19 @@ def do_run(args, rspecs):
         xid_c = xid_base + "." + str(runid)
         runid += 1
 
+
+        # TODO: use time.monotic()
+        startat = time_fn()
         run_ok, x = std_run(args, rs, xid_c) # in this case because we do not repeat, xid_c == runid
+        endat = time_fn()
+
+        total_time = endat - startat 
+
         if not run_ok and args.fail_fast:
             sys.exit(1)
         
         if run_ok:
-            log.log(TASK_COMPLETE_LEVEL, "%s RUN" % (rsid,))
+            log.log(TASK_COMPLETE_LEVEL, "%s RUN %f" % (rsid, total_time))
             
 def do_perf(args, rspecs):
     log.info("TASK perf")
@@ -182,6 +194,7 @@ p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
 p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a profile database instead of a CSV")
+p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Supply --analysis-metrics to nvprof")
 
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 
@@ -286,10 +299,10 @@ elif args.nvprof:
     else:
         cfg = ""
 
-    if args.npdb:
+    if args.npdb or args.npanalysis:
         cp_log_file = cp_log_file.replace(".log", ".nvprof")
         
-    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file, profile_db = args.npdb)
+    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file, profile_db = args.npdb, profile_analysis=args.npanalysis)
 
 tmpdir = l.config.get_var("tmpdir", None)
 if tmpdir: 
