@@ -87,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('filetype', nargs='?', help='Type of files to collect (default: all)', default=[])
     parser.add_argument('-p', dest="strip_path", type=int, metavar='NUM', help='Strip NUM components from filename before combining with basepath', default=0)
     parser.add_argument('-m', dest="map", metavar='FILE', help='Store map of RSID, file and filetype in FILE', default=None)
+    parser.add_argument("-a", dest='append', action='store_true', default=False, help="Append to map file")
     parser.add_argument('-s', dest="suffix", metavar='SUFFIX', help='Add suffix to filename', default=0)
     parser.add_argument('--collect-failed', dest="skip_failed", action="store_false", default=True, help='Collect files from failed runs')
 
@@ -111,7 +112,7 @@ if __name__ == "__main__":
     print "\n".join(out)
 
     if args.map:
-        mapfile = open(args.map, "w")
+        mapfile = open(args.map, "w" if not args.append else "a")
         if mapfile:
             for fn in fnames:
                 x = revmap[fn]
