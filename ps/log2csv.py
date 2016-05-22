@@ -126,6 +126,8 @@ for i in args.input:
             add_keys.add('instr_' + r.name.lower())
         elif r.type == "TASK_COMPLETE":            
             instr = {}
+        elif r.type == "FAIL":
+            pass
         else:
             assert False, r.type
 
