@@ -189,6 +189,7 @@ p.add_argument("--ignore-missing-binaries", action="store_true", default = False
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
 p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="{xtitle}cp_{rsid}_{runid}.log")
+p.add_argument("--only", dest="only", help="Only run binids in FILE")
 
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
@@ -269,6 +270,17 @@ log.info("CMD_LINE: %s" % (cmd_line))
 
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
+
+if args.only:
+    onlybinids = set([s.strip() for s in open(args.only, "r").readlines() if s != '\n'])
+    all_rsids = set([rs.get_id() for rs in rspecs])
+
+    if onlybinids.intersection(all_rsids) != onlybinids:
+        log.error('Subset IDs did not match (possibly misspelt?): %s' % (onlybinids.difference(all_rsids)))
+        sys.exit(1)                  
+
+    log.info("SUBSET: %s" % (onlybinids,))
+    rspecs = filter(lambda rs: rs.get_id() in onlybinids, rspecs)
 
 if args.xtitle:
     for rs in rspecs:
