@@ -31,6 +31,13 @@ if hasattr(time, 'monotonic'):
 else:
     time_fn = time.time
 
+def log_env():
+    interesting = ['CUDA_VISIBLE_DEVICES']
+
+    for v in interesting:
+        if v in os.environ:
+            log.info('Environment: %s=%s' % (v, os.environ[v]))
+
 def load_rlimits(lo):
     x = core.RLimit()
     rlimit_cpu = lo.config.get_var("rlimit.cpu", None)
@@ -267,6 +274,7 @@ log.info("SYSTEM: %s" % (",".join(os.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
 log.info("CMD_LINE: %s" % (cmd_line))
+log_env()
 
 if args.missing:
     rspecs = filter(lambda rs: rs.get_id() not in PREV_BINIDS, rspecs)
