@@ -63,6 +63,8 @@ class REChecker(Checker):
         m = self.re.search(run.stdout) #TODO: stderr?
         if m:
             run.check_ok = True
+        else:
+            log.info("REChecker could not match '%s'" % (self.re.pattern))
 
         return run.check_ok
 
