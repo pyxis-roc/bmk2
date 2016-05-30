@@ -17,7 +17,7 @@ import logproc
 import argparse
 import os
 
-def build_collect_list(logfile, skip_failed = True):
+def build_collect_list(logfile, skip_failed = True, strip_path = 0, suffix = None):
     out = {}
     last_runid = {}
     failed_runids = set()
@@ -39,7 +39,7 @@ def build_collect_list(logfile, skip_failed = True):
                 if r.filetype not in out[r.rsid][r.runid]:
                     out[r.rsid][r.runid][r.filetype] = []
 
-                s = args.strip_path
+                s = strip_path
                 x = -1
                 n = r.file
                 while s > 0:
@@ -49,8 +49,8 @@ def build_collect_list(logfile, skip_failed = True):
                 else:
                     n = r.file[x+1:]
 
-                if args.suffix:
-                    n = n + args.suffix
+                if suffix:
+                    n = n + suffix
 
                 out[r.rsid][r.runid][r.filetype].append(n)
         elif r.type == "FAIL":
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    basepath, colfiles = build_collect_list(args.logfile, args.skip_failed)
+    basepath, colfiles = build_collect_list(args.logfile, args.skip_failed, args.strip_path, args.suffix)
     out = []
     fnames = set()
     revmap = {}
