@@ -74,6 +74,8 @@ def std_run(args, rs, runid):
             return True, x
         else:
             log.log(FAIL_LEVEL, "%s: check failed: %s" % (rsid, x))
+            if args.always_cleanup:
+                x.cleanup()
             return False, x
     else:
         log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
@@ -197,7 +199,7 @@ p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help=
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
 p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="{xtitle}cp_{rsid}_{runid}.log")
 p.add_argument("--only", dest="only", help="Only run binids in FILE")
-
+p.add_argument("--always-cleanup", dest="always_cleanup", action="store_true", help="Always cleanup files even if checks fail")
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")

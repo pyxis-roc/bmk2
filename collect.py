@@ -43,7 +43,7 @@ def build_collect_list(logfile, skip_failed = True, strip_path = 0, suffix = Non
                 x = -1
                 n = r.file
                 while s > 0:
-                    x = r.file.find('/', x)
+                    x = r.file.find('/', x + 1)
                     if x == -1: break
                     s -= 1
                 else:
