@@ -111,6 +111,21 @@ class Loader(object):
 
         return False
 
+    def apply_config(self):
+        if len(self.binaries) == 0:
+            log.error("No binaries to apply configuration to.")
+            return False
+
+        if self.config.bin_config is not None:
+            log.info('Applying configuration "%s"' % (self.config.bin_config,))
+
+            for b in self.binaries.itervalues():
+                b.apply_config(self.config.bin_config)
+        else:
+            log.info('No binary-specific configurations specified')
+        
+        return True
+
     def associate_inputs(self, binputs = None):
         if len(self.binaries) == 0:
             log.error("No binaries")

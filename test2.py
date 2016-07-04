@@ -213,6 +213,7 @@ p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a prof
 p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Supply --analysis-metrics to nvprof")
 p.add_argument("--max-output-bytes", dest="max_output", type=int, metavar="BYTES", help="Truncate output and error logs from runs if they exceed BYTES, zero to never truncate", default=1600)
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
+p.add_argument("--cfg", dest="configs", action="append", help="Configurations to apply. default is always applied if present", default=[])
 
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
@@ -257,7 +258,7 @@ if args.readlog:
     log.info('%d completed task rsids read from log' % (len(PREV_BINIDS)))
 
 
-loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries)
+loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs)
 if not loaded:
     sys.exit(1)
 else:

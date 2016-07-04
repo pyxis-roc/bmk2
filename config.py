@@ -125,9 +125,52 @@ class Config(object):
         except ConfigParser.NoOptionError:
             pass
 
+        self.bin_config = None
+        if x.has_section("default-config"):
+            self.bin_config = self.section_to_dict(x, "default-config")
+
         self.cfg = x
         return True
-                    
+
+    def section_to_dict(self, cfgobj, section):        
+        kv = cfgobj.items(section)
+
+        o = set()
+        for kk in kv:
+            if kk[0] in o:
+                log.warning("Duplicated key '%s' in section '%s'", kk[0], section)
+
+            o.add(kk[0])
+
+        return dict(kv)
+        
+    def load_bin_config(self, config_sections):
+        x = self.cfg
+        if not x:
+            return False
+        
+        ok = True
+        out = []
+        for s in config_sections:
+            if not x.has_section(s):
+                log.error("Configuration section '%s' not found" % (s,))
+                ok = False
+            else:
+                out.append(self.section_to_dict(x, s))
+
+        if ok:
+            nout = {}
+            for o in out:
+                nout.update(o)
+
+            if self.bin_config is None:
+                self.bin_config = {}
+
+            self.bin_config.update(nout)
+            return True
+
+        return ok
+        
     def get_var(self, key, default = None, sec = "bmk2"):
         try:
             return self.cfg.get(sec, key)

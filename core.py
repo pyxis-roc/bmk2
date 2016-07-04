@@ -185,6 +185,9 @@ class Binary(object):
     def filter_inputs(self, inputs):
         raise NotImplementedError
 
+    def apply_config(self, config):
+        raise NotImplementedError
+
 class Converter(Binary):
     def get_run_spec(self, bmkinput):
         x = BasicRunSpec()
