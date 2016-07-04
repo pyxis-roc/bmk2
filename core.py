@@ -47,6 +47,65 @@ def create_log(ftemplate, run):
     complete = os.path.join(os.path.dirname(run.binary), ftemplate.format(**v))
     return complete
 
+def squash_output(buf, max_bytes = 1600):
+    if len(buf) <= max_bytes:
+        return buf
+    
+    header = buf[:max_bytes/2]
+    tail = buf[-max_bytes/2:]
+
+    pos = header.rfind("\n")
+    if pos != -1:
+        # can trim by a lot ...
+        header = header[:pos]
+
+    pos = tail.find("\n")
+    if pos != -1:
+        # can trim by a lot ...
+        tail = tail[pos+1:]
+
+    return header + "\n *** SQUASHED *** \n " + tail    
+    
+def strip_repeated_lines(buf, min_repeat = 2, msg = '<< previous line repeated {count} times >>\n'):
+    import cStringIO
+    
+    x = cStringIO.StringIO(buf)
+    y = cStringIO.StringIO()
+
+    prev = None
+    repeat_count = 0
+    hold_buf = ""
+
+    for l in x:
+        if l == prev:
+            repeat_count += 1
+            if repeat_count <= min_repeat:
+                hold_buf = hold_buf + l
+        else:
+            if hold_buf:
+                if repeat_count > min_repeat:
+                    y.write(msg.format(count = repeat_count))
+                else:
+                    y.write(hold_buf)
+
+            repeat_count = 0
+            hold_buf = ""
+            y.write(l)
+            
+        prev = l
+    
+    if hold_buf:
+        if repeat_count > min_repeat:
+            y.write(msg.format(count = repeat_count))
+        else:
+            y.write(hold_buf)
+
+        repeat_count = 0
+        hold_buf = ""
+
+    return y.getvalue()
+
+
 def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     output = None
     error = None

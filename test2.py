@@ -47,6 +47,12 @@ def load_rlimits(lo):
 
     return x
 
+def squash_output(output, buf_size = 1800):
+    if buf_size <= 0:
+        return output
+    else:
+        return core.squash_output(core.strip_repeated_lines(output), buf_size)
+    
 def read_log(logfiles):
     if not isinstance(logfiles, list):
         logfiles = [logfiles]
@@ -65,8 +71,8 @@ def std_run(args, rs, runid):
 
     if x.run_ok:
         if args.verbose:
-            if x.stdout: log.info(x.stdout)
-            if x.stderr: log.info(x.stderr)
+            if x.stdout: log.info(squash_output(x.stdout, args.max_output))
+            if x.stderr: log.info(squash_output(x.stderr, args.max_output))
 
         if rs.checker.check(x):
             log.log(PASS_LEVEL, "%s: %s" % (rsid, x))
@@ -79,8 +85,8 @@ def std_run(args, rs, runid):
             return False, x
     else:
         log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
-        if x.stdout: log.info("%s STDOUT\n" %(rsid) + x.stdout)
-        if x.stderr: log.info("%s STDERR\n" %(rsid) + x.stderr + "%s END\n" % (rsid))
+        if x.stdout: log.info("%s STDOUT\n" %(rsid) + squash_output(x.stdout, args.max_output))
+        if x.stderr: log.info("%s STDERR\n" %(rsid) + squash_output(x.stderr, args.max_output) + "%s END\n" % (rsid))
         x.cleanup()
         return False, x
     
@@ -205,7 +211,7 @@ p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list o
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
 p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a profile database instead of a CSV")
 p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Supply --analysis-metrics to nvprof")
-
+p.add_argument("--max-output-bytes", dest="max_output", type=int, metavar="BYTES", help="Truncate output and error logs from runs if they exceed BYTES, zero to never truncate", default=1600)
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
