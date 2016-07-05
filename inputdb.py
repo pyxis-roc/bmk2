@@ -40,14 +40,18 @@ class InputDBcfg(ObjectPropsCFG):
         self.meta = dict([('version', "2"), ('basepath', basepath)])
 
     def post_load(self):
-        basepath = self.meta['basepath']
+        basepath = os.path.expanduser(self.meta['basepath'])
+
+        if not (os.path.exists(basepath)):
+            print >>sys.stderr, "Basepath '%s' ('%s') does not exist" % (basepath, self.meta['basepath'])
+            return False
 
         for s in self.objects:
             e = self.objects[s]
             if self.unserialize_input:
                 e = self.unserialize_input(e, basepath)
 
-            e['file'] = os.path.join(basepath, e['file'])            
+            e['file'] = os.path.join(basepath, e['file'])
 
         return True
 
@@ -56,7 +60,8 @@ class InputDBcfg(ObjectPropsCFG):
             self.serialize_input(section)
             
         if 'file' in section:
-            section['file'] = os.path.relpath(section['file'], self.meta['basepath'])
+            basepath = os.path.expanduser(self.meta['basepath'])
+            section['file'] = os.path.relpath(section['file'], basepath)
 
         return section
 
@@ -116,7 +121,7 @@ if __name__ == "__main__":
     if args.update:
         idb = InputDB(args.dbfile, args.inpproc)
         idb.load()
-        basepath = idb.cfg.meta['basepath'] 
+        basepath = os.path.expanduser(idb.cfg.meta['basepath'])
         print >>sys.stderr, "using basepath from file: %s" % (basepath,)
     else:
         idb = InputDB(args.dbfile, args.inpproc)

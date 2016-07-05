@@ -463,12 +463,12 @@ class RunSpec(BasicRunSpec):
 
         for a in self.checker.get_input_files():
             if not os.path.exists(a):
-                log.error("Input file '%s' for checker does not exist [bin %s]" % (a, self.bid))
+                log.error("Checker input file '%s' does not exist [bin %s]" % (a, self.bid))
                 return False
 
             # TODO: add AT_DIR ...
             if not os.path.isfile(a):
-                log.error("Input file '%s' for checker is not a file [bin %s]" % (a, self.bid))
+                log.error("Checker input file '%s' is not a file [bin %s]" % (a, self.bid))
                 return False
 
         return True

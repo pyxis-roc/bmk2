@@ -31,7 +31,7 @@ class InputPropsCfg(ObjectPropsCFG):
         path_items = self.meta.get("paths", "")
         self.path_items = set([xx.strip() for xx in path_items.split(",")])
 
-        basepath = self.inputdb.cfg.meta['basepath']
+        basepath = os.path.expanduser(self.inputdb.cfg.meta['basepath'])
 
         for e in self.objects.itervalues():
             for pi in self.path_items:
@@ -41,7 +41,8 @@ class InputPropsCfg(ObjectPropsCFG):
         return True
 
     def unparse_section(self, section):
-        bp = self.inputdb.cfg.meta['basepath']
+        bp = os.path.expanduser(self.inputdb.cfg.meta['basepath'])
+
         for pi in self.path_items:
             if pi in section:
                 section[pi] = os.path.relpath(section[pi], bp)
