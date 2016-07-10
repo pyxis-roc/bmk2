@@ -17,13 +17,13 @@ import pandas as pd
 
 cfg = psconfig.PSConfig()
 
-parser = argparse.ArgumentParser(description="Summarize performance data", fromfile_prefix_chars='@')
+parser = argparse.ArgumentParser(description="Normalize performance data by joining input and base on keys and calculating input[metric] / base[metric] ", fromfile_prefix_chars='@')
 
 parser.add_argument("base", help="Base file")
 parser.add_argument("input", help="Input file")
 parser.add_argument("-m", dest="metric", help="Metric to normalize")
 parser.add_argument("-k", dest="key", action="append", default=[])
-parser.add_argument("--rk", dest="right_keys", action="append", default=[], help="Retain right keys")
+parser.add_argument("--rk", dest="right_keys", action="append", default=["experiment"], help="Retain right keys")
 parser.add_argument("--rsuffix", dest="right_suffix", default="_right")
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
