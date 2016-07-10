@@ -71,8 +71,8 @@ def std_run(args, rs, runid):
 
     if x.run_ok:
         if args.verbose:
-            if x.stdout: log.info(squash_output(x.stdout, args.max_output))
-            if x.stderr: log.info(squash_output(x.stderr, args.max_output))
+            if x.stdout: log.info("%s STDOUT\n" %(rsid) + squash_output(x.stdout, args.max_output))
+            if x.stderr: log.info("%s STDERR\n" %(rsid) + squash_output(x.stderr, args.max_output))
 
         if rs.checker.check(x):
             log.log(PASS_LEVEL, "%s: %s" % (rsid, x))
