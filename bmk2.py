@@ -102,6 +102,10 @@ class Loader(object):
                     continue
 
                 self.binaries[b.get_id()] = b
+
+                if d == '':
+                    log.warning('binspec path from "%s" is empty' % (binspec,))
+
                 b.props._cwd = d
 
             return True
