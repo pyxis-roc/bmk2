@@ -199,6 +199,8 @@ p.add_argument("--iproc", dest="inpproc", metavar="FILE", help="Input processor"
 p.add_argument("--bs", dest="binspec", metavar="FILE", help="Binary specification", default="./bmktest2.py")
 p.add_argument("--bispec", dest="bispec", metavar="FILE_OR_MNEMONIC", help="Binary+Input specification")
 p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search PATH for bmktest2.py")
+p.add_argument("--xs", dest="xtended_scan", action="store_true", help="Also recognize bmktest2-*.py in scans")
+
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
 p.add_argument("--ignore-missing-binaries", action="store_true", default = False)
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
@@ -258,7 +260,7 @@ if args.readlog:
     log.info('%d completed task rsids read from log' % (len(PREV_BINIDS)))
 
 
-loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs)
+loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs, extended_scan = args.xtended_scan)
 if not loaded:
     sys.exit(1)
 else:

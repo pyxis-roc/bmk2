@@ -44,7 +44,7 @@ def summarize(log, rspecs):
 
     log.info('Summary: Runspecs: %s Binaries: %d Inputs: %d  Total runs: %d Failed: %d Failed Checks: %d' % (len(rspecs), len(bins), len(inputs), runs, failed_runs, failed_checks))
 
-def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None):
+def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None, extended_scan = False):
     import bmk2
     import config
     import sys
@@ -52,6 +52,8 @@ def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ig
     if scandir:
         basepath = os.path.abspath(scandir)
         binspecs = scan(scandir, "bmktest2.py")
+        if extended_scan:
+            binspecs.extend(scan(scandir, "bmktest2-*.py"))
     else:
         if not os.path.exists(binspec):
             print >>sys.stderr, "Unable to find %s" % (binspec,)
