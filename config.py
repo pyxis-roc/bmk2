@@ -161,12 +161,21 @@ class Config(object):
         if ok:
             nout = {}
             for o in out:
-                nout.update(o)
+                if 'type' in o and o['type'] == 'bmk2config':
+                    if 'disable_binaries' in o:
+                        v = set([xx.strip() for xx in o['disable_binaries'].split(",")])
+                        self.disable_binaries = self.disable_binaries.union(v)
+                    else:
+                        # TODO: handle other configuration specific things?
+                        pass
+                else:
+                    nout.update(o)
 
             if self.bin_config is None:
                 self.bin_config = {}
 
             self.bin_config.update(nout)
+
             return True
 
         return ok
