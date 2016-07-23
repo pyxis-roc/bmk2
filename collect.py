@@ -20,14 +20,14 @@ import os
 def build_collect_list(logfile, skip_failed = True, strip_path = 0, suffix = None):
     out = {}
     last_runid = {}
-    failed_runids = set()
+    failed_runids = {}
 
     basepath = ""
     for r in logproc.parse_log_file(logfile):
         if r.type == "COLLECT":
             if r.filetype == "basepath":
                 basepath = r.file
-            else:
+            else:                
                 if r.rsid not in out:
                     out[r.rsid] = {}
 
@@ -54,11 +54,25 @@ def build_collect_list(logfile, skip_failed = True, strip_path = 0, suffix = Non
 
                 out[r.rsid][r.runid][r.filetype].append(n)
         elif r.type == "FAIL":
-            if "run failed" in r.message: # not robust!
-                if r.binid in last_runid:
-                    if skip_failed:
-                        del out[r.binid][last_runid[r.binid]]
+            if r.runid is not None:
+                if r.binid not in failed_runids:
+                    failed_runids[r.binid] = set()
 
+                failed_runids[r.binid].add(r.runid)
+            else:
+                # older log files
+                if skip_failed:
+                    if "run failed" in r.message or "check failed" in r.message: # not robust!
+                        if r.binid in last_runid:
+                            del out[r.binid][last_runid[r.binid]]
+
+    if skip_failed:
+        for binid in failed_runids:
+            if binid in out:
+                for runid in failed_runids[binid]:
+                    if runid in out[binid]:
+                        del out[binid][runid]
+                
     return basepath, out
 
 def add_names(fnames, basepath, files, out):

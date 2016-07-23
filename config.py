@@ -171,10 +171,11 @@ class Config(object):
                 else:
                     nout.update(o)
 
-            if self.bin_config is None:
-                self.bin_config = {}
+            if len(nout):
+                if self.bin_config is None:
+                    self.bin_config = {}
 
-            self.bin_config.update(nout)
+                self.bin_config.update(nout)
 
             return True
 

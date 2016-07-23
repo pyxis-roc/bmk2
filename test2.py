@@ -79,12 +79,12 @@ def std_run(args, rs, runid):
             x.cleanup()
             return True, x
         else:
-            log.log(FAIL_LEVEL, "%s: check failed: %s" % (rsid, x))
+            log.log(FAIL_LEVEL, "%s %s: check failed: %s" % (rsid, runid, x))
             if args.always_cleanup:
                 x.cleanup()
             return False, x
     else:
-        log.log(FAIL_LEVEL, "%s: run failed" % (rsid))
+        log.log(FAIL_LEVEL, "%s %s: run failed" % (rsid, runid))
         if x.stdout: log.info("%s STDOUT\n" %(rsid) + squash_output(x.stdout, args.max_output))
         if x.stderr: log.info("%s STDERR\n" %(rsid) + squash_output(x.stderr, args.max_output) + "%s END\n" % (rsid))
         x.cleanup()
@@ -127,16 +127,17 @@ def do_perf(args, rspecs):
 
         while run < args.repeat:
             xid_c = xid_base + "." + str(runid)
+            runid2 = xid_c + "." + str(run + repeat)
 
             ts = datetime.datetime.now()
             log.info("PERFDATE BEGIN_RUN %s" % (ts.strftime(TIME_FMT)))
-            run_ok, x = std_run(args, rs, xid_c + "." + str(run + repeat))
+            run_ok, x = std_run(args, rs, runid2)
             log.info("PERFDATE END_RUN %s" % (datetime.datetime.now().strftime(TIME_FMT)))
 
             if run_ok:
                 p = rs.perf.get_perf(x)
                 if p is None:
-                    log.log(FAIL_LEVEL, "%s: perf extraction failed: %s" % (rsid, x))
+                    log.log(FAIL_LEVEL, "%s %s: perf extraction failed: %s" % (rsid, runid2, x))
                     if args.fail_fast:
                         sys.exit(1)
                     else:
@@ -147,7 +148,7 @@ def do_perf(args, rspecs):
                 run += 1
             else:
                 if repeat < 3:
-                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, xid_c, x))
+                    log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid2, x))
                     repeat += 1
                 else:
                     if run == 0:
@@ -207,6 +208,7 @@ p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help=
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
 p.add_argument("--cp-log", dest="cuda_profile_log", action="store_true", help="CUDA Profiler logfile", default="{xtitle}cp_{rsid}_{runid}.log")
 p.add_argument("--only", dest="only", help="Only run binids in FILE")
+p.add_argument("--invert-only", dest="invert_only", action="store_true", help="Invert --only, do NOT run binids in FILE")
 p.add_argument("--always-cleanup", dest="always_cleanup", action="store_true", help="Always cleanup files even if checks fail")
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
@@ -296,10 +298,16 @@ if args.only:
 
     if onlybinids.intersection(all_rsids) != onlybinids:
         log.error('Subset IDs did not match (possibly misspelt?): %s' % (onlybinids.difference(all_rsids)))
-        sys.exit(1)                  
+        if args.binputs is None: sys.exit(1)
 
-    log.info("SUBSET: %s" % (onlybinids,))
-    rspecs = filter(lambda rs: rs.get_id() in onlybinids, rspecs)
+    if not args.invert_only:
+        log.info("SUBSET: %s" % (onlybinids,))
+        rspecs = filter(lambda rs: rs.get_id() in onlybinids, rspecs)
+    else:
+        log.info("EXCLUDING: %s" % (onlybinids,))
+        log.info("SUBSET: %s" % (all_rsids - onlybinids,))
+        rspecs = filter(lambda rs: rs.get_id() not in onlybinids, rspecs)
+
 
 if args.xtitle:
     for rs in rspecs:

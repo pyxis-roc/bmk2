@@ -26,7 +26,7 @@ perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', '
 tc_info = namedtuple('tc_info', ['type', 'rsid', 'task', 'task_args'])
 missing_info = namedtuple('missing_info', ['type', 'binid'])
 instr = namedtuple('instr', ['type', 'name', 'args'])
-fail_info = namedtuple('fail_info', ['type', 'binid', 'message'])
+fail_info = namedtuple('fail_info', ['type', 'binid', 'runid', 'message'])
 
 st = re.compile("^START")
 dt = re.compile("^INFO DATE (START|END)")
@@ -36,7 +36,7 @@ pd_begin = re.compile("^INFO PERFDATE BEGIN_RUN")
 pd_end = re.compile("^INFO PERFDATE END_RUN")
 p = re.compile("^PERF ")
 missing = re.compile("^FAIL MISSING PERF")
-fail_general = re.compile("^FAIL ([^:]+): ?(.+)$")
+fail_general = re.compile("^FAIL ([^: ]+) ?([^: ]+)?: ?(.+)$")
 tc_re = re.compile("^TASK_COMPLETE ([^ ]+) ([^ ]+)( (.*))?$")
 instr_re = re.compile("^INSTR ([^ ]+) (.*)$")
 
@@ -107,8 +107,8 @@ def parse_log_file(logfile):
                 continue
 
             m = fail_general.match(l)
-            if m:
-                yield fail_info("FAIL", binid = m.group(1), message=m.group(2))
+            if m:                
+                yield fail_info("FAIL", binid = m.group(1), runid=m.group(2), message=m.group(3))
                 continue
 
             m = tc_re.match(l)
