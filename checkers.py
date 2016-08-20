@@ -60,9 +60,11 @@ class REChecker(Checker):
             log.error("Cannot check failed run %s" % (run))
             return False
 
-        m = self.re.search(run.stdout) #TODO: stderr?
-        if m:
-            run.check_ok = True
+        for o in [run.stdout, run.stderr]:
+            m = self.re.search(o) #TODO: stderr?
+            if m:
+                run.check_ok = True
+                break
         else:
             log.info("REChecker could not match '%s'" % (self.re.pattern))
 
