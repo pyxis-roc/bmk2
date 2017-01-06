@@ -15,15 +15,16 @@ import sys
 import argparse
 import psconfig
 import pandas as pd
+import re
 
-def check_raw_data(raw_table):
+def check_raw_data(raw_table, row_id = []):
     rdtable = raw_table
     counts = {}
 
     err = False
 
     present = set()
-    for r in rdtable[['xid', 'run']].itertuples(index=False):
+    for r in rdtable[['xid', 'run'] + row_id].itertuples(index=False):
         if r in present:
             print >>sys.stderr, "ERROR: Possibly duplicate raw data: xid: %s run: %d" % (r[0],r[1])
             err = True
@@ -32,14 +33,16 @@ def check_raw_data(raw_table):
 
         xid = r[0]
         
-        if xid not in counts:
-            counts[xid] = 0
+        data_key = tuple([xid] + list(r[2:]))
 
-        counts[xid] += 1
+        if data_key not in counts:
+            counts[data_key] = 0
 
-    for xid, count in counts.iteritems():
+        counts[data_key] += 1
+
+    for data_key, count in counts.iteritems():
         if count == 1:
-            print >>sys.stderr, "WARNING: Only one raw data point for %s" % (xid,)
+            print >>sys.stderr, "WARNING: Only one raw data point for %s" % (data_key,)
 
     return not err
 
@@ -63,6 +66,7 @@ def average_data(key, raw_table, fields_to_avg):
             
         return pd.DataFrame(out)
 
+    #print key + ['xid'] + fields_to_avg
     rtg = raw_table[key + ['xid'] + fields_to_avg].groupby(key, sort=False)
     rtga = rtg.apply(avg)
     rtga.reset_index(len(key), drop=True, inplace=True)  # drop the index of the dataframe that is returned by apply
@@ -74,7 +78,11 @@ parser = argparse.ArgumentParser(description="Import raw performance data")
 
 parser.add_argument("input", help="Input file")
 
+parser.add_argument("-k", dest="key_fields", metavar="FIELD", action="append", default=[], help="Key fields")
+parser.add_argument("--id", dest="id_fields", metavar="FIELD", action="append", default=[], help="FIELD is a unique identifier to be combined with XID")
 parser.add_argument("-a", dest="avg_fields", metavar="FIELD", action="append", default=[], help="Average FIELD")
+parser.add_argument("--avg-re", dest="avg_fields_re", metavar="FIELD", action="append", default=[], help="Regular expression for FIELD to average")
+parser.add_argument("--nc", dest="no_config", action="store_true", default=False, help="Do not read import.average fields from config")
 
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
@@ -82,11 +90,26 @@ parser.add_argument("-o", dest="output", metavar="FILE",
 args = parser.parse_args()
 
 t = pd.read_csv(args.input)
-key = ['experiment'] + cfg.get_key()
+key = ['experiment'] + cfg.get_key() + args.key_fields
 t.sort_values(by=key, inplace=True)
 
-if check_raw_data(t):
-    avg_fields = cfg.get_average_fields()
+if args.avg_fields_re:
+    matched = set(args.avg_fields)
+
+    for rx in args.avg_fields_re:
+        af_re = re.compile(rx)
+        matches =  [x for x in t.columns if af_re.match(x) is not None]
+        for m in matches:
+            if m not in matched:
+                args.avg_fields.append(m)
+                matched.add(m)
+
+if check_raw_data(t, args.id_fields):
+    if not args.no_config:
+        avg_fields = cfg.get_average_fields()
+    else:
+        avg_fields = []
+
     if len(avg_fields) == 0 and len(args.avg_fields) == 0:
         print >>sys.stderr, "Could not find list of fields to average (import.average) in configuration"
         print >>sys.stderr, "Use -a to specify fields on command line"
