@@ -16,6 +16,7 @@ import datetime
 import logproc
 import argparse
 import os
+import mapfile
 
 def build_collect_list(logfile, skip_failed = True, strip_path = 0, suffix = None):
     out = {}
@@ -95,6 +96,19 @@ def add_names(fnames, basepath, files, out):
 
     return added_fnames, added_out
 
+def mapentries(fnames, revmap):
+    for fn in fnames:
+        x = revmap[fn]
+        yield mapfile.mapfile_entry(binid = x[0],
+                                    input = "",
+                                    runid = x[1],
+                                    filetype = x[2],
+                                    filename = fn,
+                                    abspath = x[3])
+                                    
+        #print >>mapfile, "%s %s %s %s %s" % (x[0], x[1], x[2], fn, x[3])
+    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Collect extra files generated during test2.py in a single directory")
     parser.add_argument('logfile', help='Logfile')
@@ -126,9 +140,4 @@ if __name__ == "__main__":
     print "\n".join(out)
 
     if args.map:
-        mapfile = open(args.map, "w" if not args.append else "a")
-        if mapfile:
-            for fn in fnames:
-                x = revmap[fn]
-                print >>mapfile, "%s %s %s %s %s" % (x[0], x[1], x[2], fn, x[3])
-
+        mapfile.write_mapfile_raw(args.map, mapentries(fnames, revmap), "w" if not args.append else "a")
