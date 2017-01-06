@@ -298,7 +298,10 @@ if args.only:
 
     if onlybinids.intersection(all_rsids) != onlybinids:
         log.error('Subset IDs did not match (possibly misspelt?): %s' % (onlybinids.difference(all_rsids)))
-        if args.binputs is None: sys.exit(1)
+        if args.binputs is None or len(args.binputs) == 0: 
+            sys.exit(1) 
+
+    onlybinids = onlybinids.intersection(all_rsids)
 
     if not args.invert_only:
         log.info("SUBSET: %s" % (onlybinids,))
