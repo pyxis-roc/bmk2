@@ -25,9 +25,12 @@ def process_instr(name, v):
         n = v.split()
         assert len(n) == 3
         n = sum(map(int, n))
-        return str(n)        
+        return str(n)
+    elif "atomic_density_" in name:
+        #print v
+        return v
     else:
-        assert False, v.name
+        assert False, name
 
 
 cfg = psconfig.PSConfig()
