@@ -224,6 +224,8 @@ p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Sho
 p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
 
 p.add_argument("--retrace", dest="retrace", metavar="FILE", help="Read map file FILE and rerun traces")
+p.add_argument("--cl-device", dest="cl_device", metavar="PLATFORM,DEVICE", help="Run binary on PLATFORM,DEVICE")
+p.add_argument("--cl-cmdline", dest="cl_cmdline", metavar="TEMPLATE", help="Command template for OpenCL device selection")
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
@@ -315,6 +317,13 @@ if args.only:
 if args.xtitle:
     for rs in rspecs:
         rs.vars['xtitle'] = args.xtitle
+
+if args.cl_device:
+    cl_platform, cl_device = args.cl_device.split(",")
+    cl_cmdline = args.cl_cmdline or l.config.get_var("cl_cmdline", None) or "-p {platform} -d {device}"
+        
+    overlays.add_overlay(rspecs, overlays.CLDeviceOverlay, cmdline_template=cl_cmdline, 
+                         cl_platform = cl_platform, cl_device = cl_device)
 
 if args.cuda_profile:
     cp_cfg_file = args.cuda_profile_config or l.config.get_var("cp_cfg", None)

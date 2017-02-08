@@ -24,3 +24,4 @@
 ./perf.py
 ./sconvert.py
 ./test2.py
+./mapfile.py
