@@ -51,6 +51,9 @@ class PerfRE(object):
         if not (run.run_ok and run.check_ok):
             return None
 
+        run.stdout = run.stdout.replace("\r", "");
+        run.stderr = run.stderr.replace("\r", "");
+
         m = self.re.search(run.stdout)
         if not m and run.stderr:
             m = self.re.search(run.stderr)

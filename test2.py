@@ -22,7 +22,11 @@ import logproc
 import overlays
 import config
 import core
-import resource
+
+if os.name != "nt":
+    import resource
+    
+import platform
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -285,7 +289,7 @@ else:
     log.info("Configuration loaded with some errors ignored. See previous error messages for information.")
 
 start = datetime.datetime.now()
-log.info("SYSTEM: %s" % (",".join(os.uname())))
+log.info("SYSTEM: %s" % (",".join(platform.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
 log.info("CMD_LINE: %s" % (cmd_line))

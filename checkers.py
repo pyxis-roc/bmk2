@@ -12,6 +12,7 @@
 from core import Run, AT_OPAQUE
 import re
 import logging
+import os
 log = logging.getLogger(__name__)
 
 class Checker(object):
@@ -42,13 +43,22 @@ class DiffChecker(Checker):
             return False
 
         args = run.get_tmp_files([self.file1, self.gold])
-        
-        x = Run({}, "diff", [(x, AT_OPAQUE) for x in ["-q"] + args])
-        if not x.run():
-            log.info("diff -u '%s' '%s'" % tuple(args))
-            return False
 
-        run.check_ok = True
+        if os.name != "nt":
+        
+            x = Run({}, "diff", [(x, AT_OPAQUE) for x in ["-q"] + args])
+            if not x.run():
+                log.info("diff -u '%s' '%s'" % tuple(args))
+                return False
+
+            run.check_ok = True   
+        else:
+            x = Run({}, "fc.exe", [(x, AT_OPAQUE) for x in args])
+            if not x.run():
+                log.info("fc.exe -u '%s' '%s'" % tuple(args))
+                return False
+
+            run.check_ok = True
         return True
 
 class REChecker(Checker):
