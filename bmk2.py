@@ -24,6 +24,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def load_binary_specs(f, binary_group = 'BINARIES'):
+
     g = load_py_module(f)
 
     if binary_group in g:
@@ -89,6 +90,7 @@ class Loader(object):
         return True
 
     def load_binaries(self, binspec, sel_binaries = None, bingroup = "BINARIES"):
+
         d = os.path.dirname(binspec)
         binaries = load_binary_specs(binspec, bingroup)
         if binaries:
@@ -169,36 +171,39 @@ class Loader(object):
                     
         return out
 
-def get_exe_name():
+def get_exe_name(bin_dir):
 
     # For backwards compatibility
-    if os.path.isfile("test"):
-        return "test"
+    if os.path.isfile(os.path.join(bin_dir, "test")):
+        return os.path.join(bin_dir, "test")
 
     # CMake systems call the executable test_exe
-    if os.path.isfile("test_exe"):
-        return "test_exe"
+    if os.path.isfile(os.path.join(bin_dir, "test_exe")):
+        return os.path.join(bin_dir, "test_exe")
 
     # For mass generation, CMake names the executable test_exe_X
     # for some natural number X. This will pick that up.
-    my_exe = [f for f in os.listdir(".") if "test_exe" in f]
+    my_exe = [f for f in os.listdir(bin_dir) if "test_exe" in f]
     if len(my_exe) == 1:
         return my_exe[0]
 
     # Otherwise we're in windows and the binary is in either
     # Debug or Release. Try for Release first
     bin_folder = ""
-    if os.path.isdir("Release"):
-        bin_folder = "Release"
-    elif os.path.isdir("Debug"):
-        bin_folder = "Debug"
+    ret_folder = ""
+    if os.path.isdir(os.path.join(bin_dir, "Release")):
+        bin_folder = os.path.join(bin_dir, "Release")
+        ret_folder = "Release"
+    elif os.path.isdir(os.path.join(bin_dir, "Debug")):
+        bin_folder = os.path.join(bin_dir, "Debug")
+        ret_folder = "Debug"
     else:
         return ""
 
     # pick the exe out of the folder.
-    my_exe = [os.path.join(bin_folder,f) for f in os.listdir(bin_folder) if "test_exe" in f and ".exe" in f]
+    my_exe = [f for f in os.listdir(bin_folder) if "test_exe" in f and ".exe" in f]
     assert(len(my_exe) == 1)
-    return my_exe[0]
+    return os.path.join(ret_folder,my_exe[0])
 
 if __name__ == "__main__":
     import sys

@@ -276,12 +276,19 @@ class Run(object):
         assert self.retval == -1, "Can't use the same Run object twice"
 
         cmdline = [self.binary]
-
+        
         # Tyler: Probably not the best way to do this, but we
         # we need to put the graph input file as the last arg
         app_args = [x for x in self.args if x[1] != 1]
         app_inputs = [x for x in self.args if x[1] == 1]
-        self.args = app_args + app_inputs
+
+        # Tyler: ugh, mis-checker (on windows) requires the
+        # args in the opposite direction
+        # I'm going to special case it for now
+        if "mis-checker" in self.bin_id:
+            self.args = app_inputs + app_args
+        else:
+            self.args = app_args + app_inputs
 
         for a, aty in self.args:
             if aty == AT_INPUT_FILE_IMPLICIT:
@@ -307,7 +314,7 @@ class Run(object):
 
         self.env = env
         self.cmd_line = cmdline
-        self.cmd_line_c = " ".join(self.cmd_line)
+        self.cmd_line_c = " ".join(self.cmd_line)        
 
         log.info("Running %s" % (str(self)))
 

@@ -55,7 +55,7 @@ class DiffChecker(Checker):
         else:
             x = Run({}, "fc.exe", [(x, AT_OPAQUE) for x in args])
             if not x.run():
-                log.info("fc.exe -u '%s' '%s'" % tuple(args))
+                log.info("fc.exe '%s' '%s'" % tuple(args))
                 return False
 
             run.check_ok = True
@@ -71,7 +71,8 @@ class REChecker(Checker):
             return False
 
         for o in [run.stdout, run.stderr]:
-            m = self.re.search(o) #TODO: stderr?
+            #Tyler: have to remove the annoying windows \r character
+            m = self.re.search(o.replace("\r","")) #TODO: stderr?
             if m:
                 run.check_ok = True
                 break
