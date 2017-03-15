@@ -28,7 +28,7 @@ def scan(path, glob, black_list = []):
         matches = fnmatch.filter(filenames, glob)
         out += [os.path.join(root, m) for m in matches]
 
-    out = [o for o in out if len([x for x in black_list if x in o]) == 0]
+    out = [o for o in out if len([x for x in black_list if x + os.sep in o]) == 0]
     return out
 
 def summarize(log, rspecs):

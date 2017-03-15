@@ -48,11 +48,14 @@ class PerfRE(object):
             assert self.units in MULTIPLIERS, "Invalid unit %s" % (re_unit)
 
     def get_perf(self, run):
+
         if not (run.run_ok and run.check_ok):
             return None
 
-        run.stdout = run.stdout.replace("\r", "");
-        run.stderr = run.stderr.replace("\r", "");
+        if run.stdout != None:
+            run.stdout = run.stdout.replace("\r", "");
+        if run.stderr != None:
+            run.stderr = run.stderr.replace("\r", "");
 
         m = self.re.search(run.stdout)
         if not m and run.stderr:
