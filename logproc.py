@@ -15,18 +15,21 @@ import re
 import datetime
 from collections import namedtuple
 
-sdate = namedtuple("sdate", ['type', 'start_date'])
-edate = namedtuple("edate", ['type', 'end_date'])
+sdate = namedtuple("sdate", ['type', 'start_date', 'raw'])
+edate = namedtuple("edate", ['type', 'end_date', 'raw'])
 
 # note: rsid and binid are one and the same
-run_begin = namedtuple("run_begin", ['type', 'begin'])
-run_end = namedtuple("run_end", ['type', 'end'])
-collect_entry = namedtuple("collect_entry", ['type', 'rsid', 'runid', 'filetype', 'file'])
-perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', 'cmdline'])
-tc_info = namedtuple('tc_info', ['type', 'rsid', 'task', 'task_args'])
-missing_info = namedtuple('missing_info', ['type', 'binid'])
-instr = namedtuple('instr', ['type', 'name', 'args'])
-fail_info = namedtuple('fail_info', ['type', 'binid', 'runid', 'message'])
+run_begin = namedtuple("run_begin", ['type', 'begin', 'raw'])
+run_end = namedtuple("run_end", ['type', 'end', 'raw'])
+collect_entry = namedtuple("collect_entry", ['type', 'rsid', 'runid', 'filetype', 'file', 'raw'])
+perf_info = namedtuple('perf_info', ['type', 'binid', 'xid', 'run', 'time_ns', 'cmdline', 'raw'])
+tc_info = namedtuple('tc_info', ['type', 'rsid', 'task', 'task_args', 'raw'])
+missing_info = namedtuple('missing_info', ['type', 'binid', 'raw'])
+instr = namedtuple('instr', ['type', 'name', 'args', 'raw'])
+fail_info = namedtuple('fail_info', ['type', 'binid', 'runid', 'message', 'raw'])
+pass_info = namedtuple('pass_info', ['type', 'binid', 'args', 'raw'])
+generic_log = namedtuple('generic_log', ['type', 'loglevel', 'raw'])
+unmatched = namedtuple('unmatched', ['type', 'raw'])
 
 st = re.compile("^START")
 dt = re.compile("^INFO DATE (START|END)")
@@ -39,8 +42,10 @@ missing = re.compile("^FAIL MISSING PERF")
 fail_general = re.compile("^FAIL ([^: ]+) ?([^: ]+)?: ?(.+)$")
 tc_re = re.compile("^TASK_COMPLETE ([^ ]+) ([^ ]+)( (.*))?$")
 instr_re = re.compile("^INSTR ([^ ]+) (.*)$")
+pass_re = re.compile('^PASS ([^ :]+)(.+)$')
+gen_log_re = re.compile('^(INFO|DEBUG|ERROR)')
 
-def parse_log_file(logfile):
+def parse_log_file(logfile, extended = False):
     with open(logfile, "r") as f:
         for l in f:
             m = st.match(l)
@@ -55,26 +60,26 @@ def parse_log_file(logfile):
                 # concatenate
 
                 if m.group(1) == "START":
-                    yield sdate("START_DATE", l.strip().split(" ", 3)[-1])
+                    yield sdate("START_DATE", l.strip().split(" ", 3)[-1], raw=l)
                 else:
-                    yield edate("END_DATE", l.strip().split(" ", 3)[-1])
+                    yield edate("END_DATE", l.strip().split(" ", 3)[-1], raw=l)
                 continue
 
             m = pd_begin.match(l)
             if m:
-                yield run_begin("RUN_BEGIN", l.strip().split(" ", 3)[-1])
+                yield run_begin("RUN_BEGIN", l.strip().split(" ", 3)[-1], raw=l)
                 continue
 
             m = pd_end.match(l)
             if m:
-                yield run_end("RUN_END", l.strip().split(" ", 3)[-1])
+                yield run_end("RUN_END", l.strip().split(" ", 3)[-1], raw=l)
                 continue
 
             m = collect_bp.match(l)
             if m:
                 fi = m.group(1)
 
-                yield collect_entry("COLLECT", rsid="", runid="", filetype="basepath", file=fi)
+                yield collect_entry("COLLECT", rsid="", runid="", filetype="basepath", file=fi, raw=l)
                 continue
 
             m = collect.match(l)
@@ -85,7 +90,7 @@ def parse_log_file(logfile):
                 fi = m.group(4)
 
                 yield collect_entry("COLLECT", rsid=rsid, runid=runid, 
-                                    filetype=ty, file=fi)
+                                    filetype=ty, file=fi, raw=l)
                 continue
 
             m = p.match(l)
@@ -96,19 +101,19 @@ def parse_log_file(logfile):
                                 xid = ls[2],
                                 run = ls[3],
                                 time_ns = ls[4],
-                                cmdline = ls[5])
+                                cmdline = ls[5], raw=l)
 
                 yield out
                 continue
 
             m = missing.match(l)
             if m:
-                yield missing_info("MISSING", binid = l.strip().split()[-1])
+                yield missing_info("MISSING", binid = l.strip().split()[-1], raw=l)
                 continue
 
             m = fail_general.match(l)
             if m:                
-                yield fail_info("FAIL", binid = m.group(1), runid=m.group(2), message=m.group(3))
+                yield fail_info("FAIL", binid = m.group(1), runid=m.group(2), message=m.group(3), raw=l)
                 continue
 
             m = tc_re.match(l)
@@ -117,16 +122,36 @@ def parse_log_file(logfile):
                 task = m.group(2).strip()
                 task_args = m.group(4)
 
-                yield tc_info("TASK_COMPLETE", rsid, task, task_args)
+                yield tc_info("TASK_COMPLETE", rsid, task, task_args, raw=l)
                 continue
-
+            
             m = instr_re.match(l)
             if m:
                 name = m.group(1)
                 args = m.group(2)
 
-                yield instr("INSTR", name, args)
+                yield instr("INSTR", name, args, raw=l)
                 continue
+
+            if extended:
+                m = pass_re.match(l)
+                if m:
+                    binid = m.group(1)
+                    args = m.group(2)
+
+                    yield pass_info("PASS", binid = binid, args = args, raw=l)
+                    continue
+
+                m = gen_log_re.match(l)
+                if m:
+                    loglevel = m.group(1)
+
+                    yield generic_log("GENERIC_LOG", loglevel, raw=l)
+                    continue
+
+                
+
+                yield unmatched("UNMATCHED", raw=l)
 
 if __name__ == "__main__":
     import sys

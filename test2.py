@@ -154,13 +154,15 @@ def do_perf(args, rspecs):
                     if run == 0:
                         # we never managed to run this ...
                         log.log(FAIL_LEVEL, "MISSING PERF %s" % (rsid,))
-                    else:
-                        log.log(TASK_COMPLETE_LEVEL, "%s PERF %d/%d/%d" % (rsid, run, repeat, args.repeat))
 
                     if args.fail_fast:
                         sys.exit(1)
 
                     break
+
+        if run > 0:
+            log.log(TASK_COMPLETE_LEVEL, "%s PERF %d/%d/%d" % (rsid, run, repeat, args.repeat))
+
 
 def check_rspecs(rspecs):
     checks = []

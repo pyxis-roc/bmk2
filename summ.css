@@ -1,0 +1,25 @@
+
+H1, H2 {font-family: sans}
+.repeat_line, .squash_line { color: gray; font-style: normal;}
+.perf_run_begin { color: blue }
+.pass { color: green}
+.fail { color: red}
+.op_stdout {font-weight: bold}
+.op_stderr {font-weight: bold}
+.cmdline {background-color: yellow}
+.output {font-style: italic}
+
+#container { box-orient: vertical; 
+	     display: box; 
+	     display: -moz-box;
+	     -moz-box-orient: vertical;
+  	     -moz-display: box}
+
+#logcontents { box-ordinal-group: 2; -moz-box-ordinal-group: 2; }
+
+.st_pass { color: green; }
+.st_failcheck { color: red;}
+.st_failrun { color: gray}
+.lineno {width: 3em; color: gray; text-align: right; padding-right: 0.5em; display: inline-block;}
+
+#index :target {background: #ffff80}
