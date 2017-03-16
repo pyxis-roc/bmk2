@@ -277,19 +277,6 @@ class Run(object):
 
         cmdline = [self.binary]
         
-        # Tyler: Probably not the best way to do this, but we
-        # we need to put the graph input file as the last arg
-        app_args = [x for x in self.args if x[1] != 1]
-        app_inputs = [x for x in self.args if x[1] == 1]
-
-        # Tyler: ugh, mis-checker (on windows) requires the
-        # args in the opposite direction
-        # I'm going to special case it for now
-        if "mis-checker" in self.bin_id:
-            self.args = app_inputs + app_args
-        else:
-            self.args = app_args + app_inputs
-
         for a, aty in self.args:
             if aty == AT_INPUT_FILE_IMPLICIT:
                 continue
