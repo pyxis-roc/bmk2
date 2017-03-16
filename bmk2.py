@@ -171,40 +171,6 @@ class Loader(object):
                     
         return out
 
-def get_exe_name(bin_dir):
-
-    # For backwards compatibility
-    if os.path.isfile(os.path.join(bin_dir, "test")):
-        return os.path.join(bin_dir, "test")
-
-    # CMake systems call the executable test_exe
-    if os.path.isfile(os.path.join(bin_dir, "test_exe")):
-        return os.path.join(bin_dir, "test_exe")
-
-    # For mass generation, CMake names the executable test_exe_X
-    # for some natural number X. This will pick that up.
-    my_exe = [f for f in os.listdir(bin_dir) if "test_exe" in f]
-    if len(my_exe) == 1:
-        return my_exe[0]
-
-    # Otherwise we're in windows and the binary is in either
-    # Debug or Release. Try for Release first
-    bin_folder = ""
-    ret_folder = ""
-    if os.path.isdir(os.path.join(bin_dir, "Release")):
-        bin_folder = os.path.join(bin_dir, "Release")
-        ret_folder = "Release"
-    elif os.path.isdir(os.path.join(bin_dir, "Debug")):
-        bin_folder = os.path.join(bin_dir, "Debug")
-        ret_folder = "Debug"
-    else:
-        return ""
-
-    # pick the exe out of the folder.
-    my_exe = [f for f in os.listdir(bin_folder) if "test_exe" in f and ".exe" in f]
-    assert(len(my_exe) == 1)
-    return os.path.join(ret_folder,my_exe[0])
-
 if __name__ == "__main__":
     import sys
     x = load_binary_specs(sys.argv[1])
