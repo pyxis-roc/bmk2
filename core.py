@@ -13,7 +13,10 @@ import os
 import subprocess
 import tempfile
 import logging
-import resource
+
+if os.name != "nt":
+    import resource
+
 import re
 
 log = logging.getLogger(__name__)
@@ -33,7 +36,7 @@ AT_LOG = 6
 placeholder_re = re.compile(r'(@[A-Za-z0-9_]+)') # may need delimiters?
 
 def escape_for_filename(n):
-    return n.replace("/", "_").replace(".", "")
+    return n.replace("/", "_").replace(".", "").replace("\\","_")
     
 def create_log(ftemplate, run):
     v = {'runid': run.runid}
@@ -273,6 +276,19 @@ class Run(object):
         assert self.retval == -1, "Can't use the same Run object twice"
 
         cmdline = [self.binary]
+        
+        # Tyler: Probably not the best way to do this, but we
+        # we need to put the graph input file as the last arg
+        app_args = [x for x in self.args if x[1] != 1]
+        app_inputs = [x for x in self.args if x[1] == 1]
+
+        # Tyler: ugh, mis-checker (on windows) requires the
+        # args in the opposite direction
+        # I'm going to special case it for now
+        if "mis-checker" in self.bin_id:
+            self.args = app_inputs + app_args
+        else:
+            self.args = app_args + app_inputs
 
         for a, aty in self.args:
             if aty == AT_INPUT_FILE_IMPLICIT:
@@ -298,7 +314,7 @@ class Run(object):
 
         self.env = env
         self.cmd_line = cmdline
-        self.cmd_line_c = " ".join(self.cmd_line)
+        self.cmd_line_c = " ".join(self.cmd_line)        
 
         log.info("Running %s" % (str(self)))
 
@@ -412,8 +428,10 @@ class BasicRunSpec(object):
         assert len(self.errors) == 0
 
         x = Run(self.env, self.binary, self.args, self)
-        if self.rlimit:
+        if self.rlimit and os.name != "nt":
             x.set_popen_args('preexec_fn', self.rlimit.set)
+        if os.name == "nt":
+            log.info("Warning: rlimit not supported on Windows OS")
 
         x.set_overlays(self.overlays)
         x.set_tmpdir(self.tmpdir)

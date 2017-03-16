@@ -21,12 +21,14 @@ def read_line_terminated_cfg(configs):
 
     return out
 
-def scan(path, glob):
+# Tyler: Not sure if this is the best place for the blacklist
+def scan(path, glob, black_list = []):
     out = []
     for root, dirnames, filenames in os.walk(path):
         matches = fnmatch.filter(filenames, glob)
         out += [os.path.join(root, m) for m in matches]
 
+    out = [o for o in out if len([x for x in black_list if x + os.sep in o]) == 0]
     return out
 
 def summarize(log, rspecs):
@@ -44,16 +46,16 @@ def summarize(log, rspecs):
 
     log.info('Summary: Runspecs: %s Binaries: %d Inputs: %d  Total runs: %d Failed: %d Failed Checks: %d' % (len(rspecs), len(bins), len(inputs), runs, failed_runs, failed_checks))
 
-def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None, extended_scan = False):
+def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None, extended_scan = False, black_list = []):
     import bmk2
     import config
     import sys
 
     if scandir:
         basepath = os.path.abspath(scandir)
-        binspecs = scan(scandir, "bmktest2.py")
+        binspecs = scan(scandir, "bmktest2.py", black_list)
         if extended_scan:
-            binspecs.extend(scan(scandir, "bmktest2-*.py"))
+            binspecs.extend(scan(scandir, "bmktest2-*.py", black_list))
     else:
         if not os.path.exists(binspec):
             print >>sys.stderr, "Unable to find %s" % (binspec,)

@@ -22,7 +22,11 @@ import logproc
 import overlays
 import config
 import core
-import resource
+
+if os.name != "nt":
+    import resource
+    
+import platform
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
@@ -182,6 +186,13 @@ def check_rspecs(rspecs):
 
     return all_ok, checks, out
 
+def populate_black_list(black_list_file):
+    f = open(black_list_file)
+    lines = f.read().replace("\r","").split("\n")
+    f.close()
+    filtered_lines = [l for l in lines if l != ""]
+    return filtered_lines
+
 log = logging.getLogger(__name__)
 
 FAIL_LEVEL = logging.getLevelName("ERROR") + 1
@@ -189,6 +200,7 @@ PASS_LEVEL = logging.getLevelName("ERROR") + 2
 PERF_LEVEL = logging.getLevelName("ERROR") + 3
 COLLECT_LEVEL = logging.getLevelName("ERROR") + 4
 TASK_COMPLETE_LEVEL = logging.getLevelName("ERROR") + 5
+BLACK_LIST = []
 
 logging.addLevelName(FAIL_LEVEL, "FAIL")
 logging.addLevelName(PASS_LEVEL, "PASS")
@@ -205,6 +217,7 @@ p.add_argument("--scan", dest="scan", metavar="PATH", help="Recursively search P
 p.add_argument("--xs", dest="xtended_scan", action="store_true", help="Also recognize bmktest2-*.py in scans")
 
 p.add_argument("--log", dest="log", metavar="FILE", help="Store logs in FILE")
+p.add_argument("--blacklist", dest="blacklist_file", metavar="FILE", help="a list of applications to skip in FILE")
 p.add_argument("--ignore-missing-binaries", action="store_true", default = False)
 p.add_argument("--cuda-profile", dest="cuda_profile", action="store_true", help="Enable CUDA profiling")
 p.add_argument("--cp-cfg", dest="cuda_profile_config", metavar="FILE", help="CUDA Profiler configuration")
@@ -265,8 +278,12 @@ else:
 if args.readlog:
     log.info('%d completed task rsids read from log' % (len(PREV_BINIDS)))
 
+if args.blacklist_file:
+    BLACK_LIST = populate_black_list(args.blacklist_file)
+    log.info('black created for applications: %s' % " ".join(BLACK_LIST))
 
-loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs, extended_scan = args.xtended_scan)
+
+loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs, extended_scan = args.xtended_scan, black_list = BLACK_LIST)
 if not loaded:
     sys.exit(1)
 else:
@@ -287,7 +304,7 @@ else:
     log.info("Configuration loaded with some errors ignored. See previous error messages for information.")
 
 start = datetime.datetime.now()
-log.info("SYSTEM: %s" % (",".join(os.uname())))
+log.info("SYSTEM: %s" % (",".join(platform.uname())))
 log.info("DATE START %s" % (start.strftime(TIME_FMT)))
 log.log(COLLECT_LEVEL, "basepath %s" % (basepath,))
 log.info("CMD_LINE: %s" % (cmd_line))
