@@ -115,10 +115,31 @@ def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     
     stdouth = subprocess.PIPE if stdout else None
     stderrh = subprocess.PIPE if stderr else None
+
+    fname_stdout = None
+    fname_stderr = None
+
+    if os.name != "nt":
+        stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
+        stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
     
     try:
         proc = subprocess.Popen(cmd, stdout=stdouth, stderr=stderrh, env = env, **popen_args)
         output, error = proc.communicate()
+        
+        if fname_stdout != None:
+            os.close(stdouth)
+            tmp_f = open(fname_stdout)
+            output = tmp_f.read()
+            tmp_f.close()
+            os.remove(fname_stdout)
+
+        if fname_stderr != None:
+            os.close(stderrh)
+            tmp_f = open(fname_stderr)
+            error = tmp_f.read()
+            tmp_f.close()
+            os.remove(fname_stderr)
 
         if proc.returncode != 0:
             log.error("Execute failed (%d): " % (proc.returncode,) + " ".join(cmd))
@@ -133,12 +154,13 @@ def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
 
     return (rv, output, error)
 
-def run_command_old(cmd, stdout = True, stderr = True, env = None, popen_args = {}): 
+def run_command_old(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
+    
     if stderr:
         stdout = True
         stderrh = subprocess.STDOUT
     else:
-        stderrh = None
+        stderrh = None 
 
     output = None
     error = None
