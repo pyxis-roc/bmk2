@@ -119,9 +119,11 @@ def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     fname_stdout = None
     fname_stderr = None
 
-    if os.name != "nt":
-        stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
-        stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
+    if os.name == "nt":
+        #stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
+        #stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
+        stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout")
+        stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stderr")
     
     try:
         proc = subprocess.Popen(cmd, stdout=stdouth, stderr=stderrh, env = env, **popen_args)
