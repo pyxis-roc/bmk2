@@ -227,6 +227,7 @@ p.add_argument("--invert-only", dest="invert_only", action="store_true", help="I
 p.add_argument("--always-cleanup", dest="always_cleanup", action="store_true", help="Always cleanup files even if checks fail")
 p.add_argument("--nvprof", dest="nvprof", action="store_true", help="Enable CUDA profiling via NVPROF")
 p.add_argument("--nvp-metrics", dest="nvp_metrics", help="Comma-separated list of NVPROF metrics")
+p.add_argument("--nvp-events", dest="nvp_events", help="Comma-separated list of NVPROF events")
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
 p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a profile database instead of a CSV")
 p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Supply --analysis-metrics to nvprof")
@@ -354,10 +355,14 @@ if args.cuda_profile:
     overlays.add_overlay(rspecs, overlays.CUDAProfilerOverlay, profile_cfg=cp_cfg_file, profile_log=cp_log_file)
 elif args.nvprof:
     cp_log_file = args.cuda_profile_log or l.config.get_var("cp_log", None)
-    cfg = ""
+    cfg = []
     metrics = []
-    if args.nvp_metrics:
+    events = []
+    if args.nvp_metrics:        
         metrics.extend(args.nvp_metrics.split(","))
+
+    if args.nvp_events:
+        events.extend(args.nvp_events.split(","))
 
     if args.nvp_metric_files:
         nvpdir = l.config.get_var("nvprof_dir", args.metadir)
@@ -365,10 +370,12 @@ elif args.nvprof:
         metrics.extend(read_line_terminated_cfg(files))
                 
     if len(metrics):
-        cfg = "--metrics %s" % (",".join(metrics),)
-    else:
-        cfg = ""
+        cfg.append("--metrics %s" % (",".join(metrics),))
 
+    if len(events):
+        cfg.append("--events %s" % (",".join(events),))
+
+    cfg = " ".join(cfg)
     if args.npdb or args.npanalysis:
         cp_log_file = cp_log_file.replace(".log", ".nvprof")
         
