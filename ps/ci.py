@@ -23,12 +23,13 @@ def calc_ci(stdev, n, level_perc):
     return zt
 
 
-parser = argparse.ArgumentParser(description="Calculate confidence intervals")
-parser.add_argument("average", help="Average", type=float)
-parser.add_argument("stdev", help="Standard deviation", type=float)
-parser.add_argument("n", help="Sample size", type=float)
-parser.add_argument("--level", help="Level in percentage", type=float, default=95)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Calculate confidence intervals")
+    parser.add_argument("average", help="Average", type=float)
+    parser.add_argument("stdev", help="Standard deviation", type=float)
+    parser.add_argument("n", help="Sample size", type=float)
+    parser.add_argument("--level", help="Level in percentage", type=float, default=95)
 
-args = parser.parse_args()
-zt = calc_ci(args.stdev, args.n, args.level)
-print "%0.2f &plusmn; %0.2f" % (args.average, zt)
+    args = parser.parse_args()
+    zt = calc_ci(args.stdev, args.n, args.level)
+    print "%0.2f &plusmn; %0.2f" % (args.average, zt)
