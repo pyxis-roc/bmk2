@@ -58,3 +58,23 @@ def write_mapfile_raw(mapfile, mapentries, mode="w"):
 
     f.close()
         
+def mapfile2dict(mapfile, fltr = None):
+    out = {}
+    for e in read_mapfile(mapfile):
+        if fltr is not None and not fltr(e): continue
+
+        k1 = (e.binid, e.input)
+        if k1 not in out:
+            out[k1] = {}
+
+        if e.runid not in out[k1]:
+            out[k1][e.runid] = {}
+
+        if e.filetype not in out[k1][e.runid]:
+            out[k1][e.runid][e.filetype] = []
+
+        out[k1][e.runid][e.filetype].append(e)
+
+    return out
+            
+            
