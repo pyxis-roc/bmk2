@@ -12,6 +12,9 @@
 
 import ConfigParser
 from collections import OrderedDict
+import os
+import glob
+import sys
 
 def cfg_get(fn, section, key, default=None):
     try:
@@ -34,6 +37,55 @@ class ObjectPropsCFG(ObjectProps):
         self.acceptable_versions = acceptable_versions
         self.meta = None
         self.objects = OrderedDict()
+        self.site = None
+
+
+    def _site_specific_cfg(self, x):
+        d = os.path.dirname(self.filename)
+        sitefiles = glob.glob(os.path.join(d, "SITE-IS.*"))
+
+        if len(sitefiles) > 1:
+            print >>sys.stderr, ("Only one sitefile should exist. Currently, multiple sitefiles exist: '%s'" % (sitefiles,))
+        elif len(sitefiles) == 0:
+            print >>sys.stderr, ("No sitefile found.")
+        else:
+            p = sitefiles[0].rindex(".")
+            self.site = sitefiles[0][p+1:]
+            print >>sys.stderr, ("Site set to '%s'." % (self.site,))
+            sscfg = self.filename + "." + self.site
+
+            if not os.path.exists(sscfg):
+                print >>sys.stderr, ("Site-specific input db '%s' not found." % (sscfg,))
+            else:
+                print >>sys.stderr, ("Loading site-specific '%s'." % (sscfg,))
+
+                y = ConfigParser.SafeConfigParser()
+
+                with open(sscfg, "rb") as f:
+                    y.readfp(f)
+
+                    v = cfg_get(y.get, self.fmt, "version")
+
+                    self.version = v
+
+                    if not self.check_version(v):
+                        av = [str(v) for v in self.acceptable_versions]
+                        if v:
+                            print >>sys.stderr, "Unknown version: %s (acceptable: %s)" % (v, ", ".join(av))
+                        else:
+                            print >>sys.stderr, "Unable to determine version (acceptable: %s)" % (", ".join(av))
+
+                    for s in ("bmktest2", ):
+                        for n, v in y.items(s):
+                            if not x.has_section(s):
+                                x.add_section(s)
+                                
+                            print >>sys.stderr, ("Setting site-specific [%s]:%s to '%s'" % (s, n, v))
+                            x.set(s, n, v)                
+
+                return True
+
+        return False
 
     def check_version(self, version):
         return version in self.acceptable_versions
@@ -69,6 +121,9 @@ class ObjectPropsCFG(ObjectProps):
                     print >>sys.stderr, "Unknown version: %s (acceptable: %s)" % (v, ", ".join(av))
                 else:
                     print >>sys.stderr, "Unable to determine version (acceptable: %s)" % (", ".join(av))
+
+
+            self._site_specific_cfg(x)
                 
             for s in x.sections():
                 if s == self.fmt:

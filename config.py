@@ -37,6 +37,7 @@ class Config(object):
         self.okay = False
         self.files = {}
         self.disable_binaries = set()
+        self.site = None
 
         if inpproc is not None:
             self.files = {FT_INPUTPROC: inpproc}
@@ -72,7 +73,55 @@ class Config(object):
             return None
 
         return self.files[ty]
-        
+
+    def _site_specific_cfg(self, x):
+        sitefiles = glob.glob(os.path.join(self.metadir, "SITE-IS.*"))
+
+        if len(sitefiles) > 1:
+            log.error("Only one sitefile should exist. Currently, multiple sitefiles exist: '%s'" % (sitefiles,))
+        elif len(sitefiles) == 0:
+            log.info("No sitefile found.")
+        else:
+            p = sitefiles[0].rindex(".")
+            self.site = sitefiles[0][p+1:]
+            log.info("Site set to '%s'." % (self.site,))
+            sscfg = os.path.join(self.metadir, "bmk2.cfg." + self.site)
+
+            if not os.path.exists(sscfg):
+                log.warning("No site-specific configuration '%s' found." % (sscfg,))
+            else:
+                log.info("Loading site-specific configuration from '%s'." % (sscfg,))
+                y = self._read_config(sscfg,)
+                
+                for s in y.sections():
+                    for n, v in y.items(s):
+                        if not self.cfg.has_section(s):
+                            self.cfg.add_section(s)
+
+                        log.info("Setting site-specific [%s]:%s to '%s'" % (s, n, v))
+                        self.cfg.set(s, n, v)                
+
+                return True
+
+        return False
+
+    def _read_config(self, f):
+        x = ConfigParser.SafeConfigParser()
+
+        with open(f, "rb") as fp:
+            x.readfp(fp)
+
+            try:
+                version = x.get("bmk2", "version")
+                if version != "2":
+                    log.error("%s: Unknown config version %s" % (self.config_file, version,))
+                    return False
+            except ConfigParser.NoOptionError:
+                log.error("%s: Unable to read version" % (self.config_file,))
+                return False
+
+            return x
+
     def _load_config(self):
         self.cfg = None
 
@@ -85,20 +134,13 @@ class Config(object):
             log.error("Configuration file '%s' does not exist" % (self.config_file,))
             return False
         
-        x = ConfigParser.SafeConfigParser()
-        with open(self.config_file, "rb") as f:
-            x.readfp(f)
+        x = self._read_config(self.config_file)
+        if x == False:
+            return x
 
-            try:
-                version = x.get("bmk2", "version")
-                if version != "2":
-                    log.error("%s: Unknown config version %s" % (self.config_file, version,))
-                    return False
-            except ConfigParser.NoOptionError:
-                log.error("%s: Unable to read version" % (self.config_file,))
-                return False
-
-            self.cfg = x
+        self.cfg = x
+        if self._site_specific_cfg(x) == False:
+            return False
 
     def load_config(self):
         x = self.cfg
