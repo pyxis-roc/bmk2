@@ -74,7 +74,7 @@ def read_bin_input_spec(f):
         if l == "#v1":
             x = BinInputSpecV1()
         else:
-            printf >>sys.stderr, "Unknown file version for input/binary spec", l
+            print >>sys.stderr, "Unknown file version for input/binary spec", l
     
         x.read(ff)
 
