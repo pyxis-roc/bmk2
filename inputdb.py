@@ -131,9 +131,9 @@ if __name__ == "__main__":
     describe_input = inpproc['describe_input']
 
     out = []
-    for root, dirnames, filenames in os.walk(basepath):
+    for root, dirnames, filenames in os.walk(basepath, followlinks=True):
         rp = os.path.relpath(root, basepath)
-        
+
         if args.glob:
             filenames = fnmatch.filter(filenames, args.glob)       
 
