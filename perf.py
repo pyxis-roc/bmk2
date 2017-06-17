@@ -89,6 +89,12 @@ class PerfRE(object):
             assert l > 0, l
 
             time_ns = w * m + f * (10**(l-1))
+        elif "float" in gd:
+            assert self.units is not None
+
+            m = MULTIPLIERS[self.units]
+            
+            time_ns = int(float(gd['float']) * m)
         else:
             assert False, "Unable to located named groups in perf regex (%s)" % (gd,)
 
