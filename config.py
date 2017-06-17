@@ -223,6 +223,20 @@ class Config(object):
 
         return ok
         
+
+    def load_var_config(self, varconfigs):
+        o = {}
+        for vv in varconfigs:
+            va, vl = vv.split("=")
+            o[va] = vl
+
+        if self.bin_config is None:
+            self.bin_config = {}
+
+        # TODO: warn of command line config over-riding?
+        self.bin_config.update(o)
+        return True
+
     def get_var(self, key, default = None, sec = "bmk2"):
         try:
             return self.cfg.get(sec, key)

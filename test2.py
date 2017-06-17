@@ -234,6 +234,7 @@ p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Sup
 p.add_argument("--max-output-bytes", dest="max_output", type=int, metavar="BYTES", help="Truncate output and error logs from runs if they exceed BYTES, zero to never truncate", default=1600)
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 p.add_argument("--cfg", dest="configs", action="append", help="Configurations to apply. default is always applied if present", default=[])
+p.add_argument("--varcfg", dest="varconfigs", action="append", help="Variable configs, specified as var=value", default=[])
 
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
@@ -284,7 +285,7 @@ if args.blacklist_file:
     log.info('black created for applications: %s' % " ".join(BLACK_LIST))
 
 
-loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs, extended_scan = args.xtended_scan, black_list = BLACK_LIST)
+loaded = standard_loader(args.metadir, args.inpproc, args.binspec, args.scan, args.bispec, args.binputs, args.ignore_missing_binaries, bin_configs=args.configs, extended_scan = args.xtended_scan, black_list = BLACK_LIST, varconfigs = args.varconfigs)
 if not loaded:
     sys.exit(1)
 else:

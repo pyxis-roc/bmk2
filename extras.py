@@ -46,7 +46,7 @@ def summarize(log, rspecs):
 
     log.info('Summary: Runspecs: %s Binaries: %d Inputs: %d  Total runs: %d Failed: %d Failed Checks: %d' % (len(rspecs), len(bins), len(inputs), runs, failed_runs, failed_checks))
 
-def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None, extended_scan = False, black_list = []):
+def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ignore_missing_binaries = False, bingroup = "BINARIES", bin_configs = None, extended_scan = False, black_list = [], varconfigs = None):
     import bmk2
     import config
     import sys
@@ -84,6 +84,11 @@ def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ig
     if bin_configs is not None and len(bin_configs) > 0:
         if not l.config.load_bin_config(bin_configs):
             print >>sys.stderr, "Unable to load binary configurations '%s'" % (bin_configs,)
+            return False
+
+    if varconfigs is not None:
+        if not l.config.load_var_config(varconfigs):
+            print >>sys.stderr, "Unable to load variable configurations '%s'" % (varconfigs,)
             return False
 
     sys.path.append(metadir)
