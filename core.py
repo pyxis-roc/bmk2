@@ -315,7 +315,10 @@ class Run(object):
                 log.debug("Created temporary file '%s' for '%s'" % (self.tmpfiles[k], k))
                 a = a.replace(k, self.tmpfiles[k])
             elif aty == AT_TEMPORARY_INPUT:
-                a = inherit_tmpfiles[a]
+                km = placeholder_re.search(a)
+                assert km is not None
+                k = km.group(1)
+                a = a.replace(k, inherit_tmpfiles[k])
 
             cmdline.append(a)
             
