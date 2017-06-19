@@ -81,6 +81,8 @@ def standard_loader(metadir, inpproc, binspec, scandir, bispec, binputs = "", ig
     if not l.initialize(ftf): return False
     sel_inputs, sel_binaries = l.split_binputs(binputs)
 
+    print >>sys.stderr, "sel_inputs set to '%s', sel_binaries set to '%s'" % (sel_inputs, sel_binaries)
+
     if bin_configs is not None and len(bin_configs) > 0:
         if not l.config.load_bin_config(bin_configs):
             print >>sys.stderr, "Unable to load binary configurations '%s'" % (bin_configs,)

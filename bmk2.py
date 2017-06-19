@@ -90,7 +90,6 @@ class Loader(object):
         return True
 
     def load_binaries(self, binspec, sel_binaries = None, bingroup = "BINARIES"):
-
         d = os.path.dirname(binspec)
         binaries = load_binary_specs(binspec, bingroup)
         if binaries:
