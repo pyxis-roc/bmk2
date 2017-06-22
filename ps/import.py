@@ -83,13 +83,20 @@ parser.add_argument("--id", dest="id_fields", metavar="FIELD", action="append", 
 parser.add_argument("-a", dest="avg_fields", metavar="FIELD", action="append", default=[], help="Average FIELD")
 parser.add_argument("--avg-re", dest="avg_fields_re", metavar="FIELD", action="append", default=[], help="Regular expression for FIELD to average")
 parser.add_argument("--nc", dest="no_config", action="store_true", default=False, help="Do not read import.average fields from config")
-
+parser.add_argument("-r", dest="raw", action="append", help="Incorporate other raw data", default=[])
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
 
 args = parser.parse_args()
 
 t = pd.read_csv(args.input)
+
+for r in args.raw:
+    rd = pd.read_csv(r)
+    t = t.merge(rd, 'left', on=['xid', 'run'])
+
+#print t
+
 key = ['experiment'] + cfg.get_key() + args.key_fields
 t.sort_values(by=key, inplace=True)
 

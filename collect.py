@@ -108,6 +108,31 @@ def mapentries(fnames, revmap):
                                     
         #print >>mapfile, "%s %s %s %s %s" % (x[0], x[1], x[2], fn, x[3])
     
+def collect_logfile(logfile, skip_failed = True, strip_path = 0, suffix = None, filetypes = []):
+    basepath, colfiles = build_collect_list(logfile, skip_failed, strip_path, suffix)
+    out = []
+    fnames = set()
+    revmap = {}
+
+    for rsid in colfiles:
+        for runid in colfiles[rsid]:
+            for ft in colfiles[rsid][runid]:
+                if len(filetypes) and ft in filetypes:
+                    af, ao = add_names(fnames, basepath, colfiles[rsid][runid][ft], out)
+                elif len(filetypes) == 0:
+                    af, ao = add_names(fnames, basepath, colfiles[rsid][runid][ft], out)
+                else:
+                    af = None
+                    ao = None
+
+                if af is not None:
+                    for f, ff in zip(af, ao):
+                        revmap[f] = (rsid, runid, ft, ff)
+                
+    assert len(fnames) == len(out)
+
+    return out, fnames, revmap
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Collect extra files generated during test2.py in a single directory")
@@ -121,22 +146,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    basepath, colfiles = build_collect_list(args.logfile, args.skip_failed, args.strip_path, args.suffix)
-    out = []
-    fnames = set()
-    revmap = {}
-    for rsid in colfiles:
-        for runid in colfiles[rsid]:
-            for ft in colfiles[rsid][runid]:
-                if len(args.filetype) and ft in args.filetype:
-                    af, ao = add_names(fnames, basepath, colfiles[rsid][runid][ft], out)
-                elif len(args.filetype) == 0:
-                    af, ao = add_names(fnames, basepath, colfiles[rsid][runid][ft], out)
+    ft = set() if len(args.filetype) == 0  else set([args.filetype])
 
-                for f, ff in zip(af, ao):
-                    revmap[f] = (rsid, runid, ft, ff)
-                
-    assert len(fnames) == len(out)
+    out, fnames, revmap = collect_logfile(args.logfile, args.skip_failed, args.strip_path, args.suffix, ft)
     print "\n".join(out)
 
     if args.map:
