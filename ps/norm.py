@@ -53,5 +53,5 @@ if len(b) == 0:
 
 #print b[args.key + [args.metric] + args.right_keys]
 m = t.merge(b[args.key + [args.metric] + args.right_keys], 'left', on=args.key, suffixes=('', args.right_suffix))
-m[args.metric + "_norm"] = m[args.metric] / m[args.metric + "_right"]
+m[args.metric + "_norm"] = m[args.metric] / m[args.metric + args.right_suffix]
 m.to_csv(args.output,index=False)

@@ -83,7 +83,7 @@ class CUDAProfilerOverlay(Overlay):
         return super(CUDAProfilerOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 class NVProfOverlay(Overlay):
-    def __init__(self, profile_cfg = None, profile_log = None, profile_db = False, profile_analysis = False):
+    def __init__(self, profile_cfg = None, profile_log = None, profile_db = False, profile_analysis = False, system_profiling = False):
         args = [(x, core.AT_OPAQUE) for x in profile_cfg.strip().split()]
         
         if profile_db or profile_analysis:
@@ -93,6 +93,9 @@ class NVProfOverlay(Overlay):
         else:
             args += [(x, core.AT_OPAQUE) for x in "--csv --print-gpu-trace".split()]
             args += [('--log-file', core.AT_OPAQUE), ('@nvprofile', core.AT_LOG)]
+
+        if system_profiling:
+            args += [('--system-profiling', core.AT_OPAQUE), ('on', core.AT_OPAQUE)]
 
         self.profile_cfg = profile_cfg
         self.profile_log = profile_log

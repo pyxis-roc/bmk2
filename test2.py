@@ -231,6 +231,7 @@ p.add_argument("--nvp-events", dest="nvp_events", help="Comma-separated list of 
 p.add_argument("--nvp-metfiles", dest="nvp_metric_files", help="Comma-separated list of NVPROF metric files")
 p.add_argument("--npdb", dest="npdb", action="store_true", help="Generate a profile database instead of a CSV")
 p.add_argument("--npanalysis", dest="npanalysis", action="store_true", help="Supply --analysis-metrics to nvprof")
+p.add_argument("--npsystem", dest="npsystem", action="store_true", help="Supply --system-profiling to nvprof")
 p.add_argument("--max-output-bytes", dest="max_output", type=int, metavar="BYTES", help="Truncate output and error logs from runs if they exceed BYTES, zero to never truncate", default=1600)
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 p.add_argument("--cfg", dest="configs", action="append", help="Configurations to apply. default is always applied if present", default=[])
@@ -380,7 +381,7 @@ elif args.nvprof:
     if args.npdb or args.npanalysis:
         cp_log_file = cp_log_file.replace(".log", ".nvprof")
         
-    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file, profile_db = args.npdb, profile_analysis=args.npanalysis)
+    overlays.add_overlay(rspecs, overlays.NVProfOverlay, profile_cfg=cfg, profile_log=cp_log_file, profile_db = args.npdb, profile_analysis=args.npanalysis, system_profiling=args.npsystem)
 
 tmpdir = l.config.get_var("tmpdir", None)
 if tmpdir: 
