@@ -184,6 +184,14 @@ class GGCInstrOverlay(Overlay):
         return super(GGCInstrOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 
+class MeasureEnergyOverlay(Overlay):
+    def __init__(self):
+        super(MeasureEnergyOverlay, self).__init__(binary=os.path.join(os.path.dirname(__file__), "measure_energy.py"))
+
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        return super(MeasureEnergyOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
+
 def add_overlay(rspecs, overlay, *args, **kwargs):
     for r in rspecs:
         r.add_overlay(overlay(*args, **kwargs))

@@ -29,6 +29,8 @@ def process_instr(name, v):
     elif "atomic_density_" in name:
         #print v
         return v
+    elif "intel-rapl" in name:        
+        return v
     else:
         assert False, name
 

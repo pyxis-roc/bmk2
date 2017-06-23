@@ -236,7 +236,7 @@ p.add_argument("--max-output-bytes", dest="max_output", type=int, metavar="BYTES
 p.add_argument("--xtitle", dest="xtitle", help="Title of experiment")
 p.add_argument("--cfg", dest="configs", action="append", help="Configurations to apply. default is always applied if present", default=[])
 p.add_argument("--varcfg", dest="varconfigs", action="append", help="Variable configs, specified as var=value", default=[])
-
+p.add_argument("--measure-energy", dest="measure_energy", action="store_true", help="Measure energy of run")
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
 p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
@@ -394,6 +394,9 @@ overlays.add_overlay(rspecs, overlays.Bmk2RTEnvOverlay)
 
 if args.retrace:
     overlays.add_overlay(rspecs, overlays.GGCInstrOverlay, args.retrace)
+
+if args.measure_energy:
+    overlays.add_overlay(rspecs, overlays.MeasureEnergyOverlay)
 
 rl = load_rlimits(l)
 
