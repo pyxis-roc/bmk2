@@ -22,9 +22,12 @@ parser = argparse.ArgumentParser(description="Normalize performance data by join
 parser.add_argument("base", help="Base file")
 parser.add_argument("input", help="Input file")
 parser.add_argument("-m", dest="metric", help="Metric to normalize")
+parser.add_argument("--im", dest="inp_metric", help="Metric in input")
+parser.add_argument("--bm", dest="base_metric", help="Metric in base")
 parser.add_argument("-k", dest="key", action="append", default=[])
 parser.add_argument("--rk", dest="right_keys", action="append", default=["experiment"], help="Retain right keys")
 parser.add_argument("--rsuffix", dest="right_suffix", default="_right")
+parser.add_argument("-s", dest="suffix", default="_norm", help="Suffix for result")
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
 
@@ -50,8 +53,29 @@ if len(b) == 0:
     print >>sys.stderr, "ERROR: %s does not contain any records" % (args.base,)
     sys.exit(1)
 
+rm = args.metric
+im = args.metric
+bm = args.metric
+if rm is None:
+    if (args.inp_metric is None or args.base_metric is None):
+        print >>sys.stderr, "ERROR: No metric supplied (-m), and one of --im and --bm are empty"
+        sys.exit(1)
+
+    im = args.inp_metric
+    bm = args.base_metric
+    rm = bm
+else:
+    if args.inp_metric is not None:
+        im = args.inp_metric
+
+    if args.base_metric is not None:
+        bm = args.base_metric
+
+rsx = args.right_suffix
+if bm not in t.columns:
+    rsx = ""
 
 #print b[args.key + [args.metric] + args.right_keys]
-m = t.merge(b[args.key + [args.metric] + args.right_keys], 'left', on=args.key, suffixes=('', args.right_suffix))
-m[args.metric + "_norm"] = m[args.metric] / m[args.metric + args.right_suffix]
+m = t.merge(b[args.key + [bm] + args.right_keys], 'left', on=args.key, suffixes=('', args.right_suffix))
+m[rm + args.suffix] = m[im] / m[bm + rsx]
 m.to_csv(args.output,index=False)
