@@ -59,11 +59,10 @@ def count_wraparound(nums, key = None):
         if key:
             n = key(n)
 
-        if prev is None:
-            prev = n
-        else:
-            if prev > n:
-                wrap += 1
+        if prev is not None and prev > n:
+            wrap += 1
+
+        prev = n
 
     return wrap
 
