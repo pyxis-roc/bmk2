@@ -42,12 +42,12 @@ def log_env():
         if v in os.environ:
             log.info('Environment: %s=%s' % (v, os.environ[v]))
 
-def load_rlimits(lo):
+def load_rlimits(lo, mt = 1):
     x = core.RLimit()
     rlimit_cpu = lo.config.get_var("rlimit.cpu", None)
     if rlimit_cpu is not None:        
-        log.info('Setting RLIMIT_CPU to %s' % (rlimit_cpu,))
-        x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu), int(rlimit_cpu)))
+        log.info('Setting RLIMIT_CPU to %s' % (rlimit_cpu*mt,))
+        x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu*mt), int(rlimit_cpu*mt)))
 
     return x
 
@@ -244,6 +244,7 @@ p.add_argument('--missing', dest="missing", action="store_true", help="Select ne
 p.add_argument("--retrace", dest="retrace", metavar="FILE", help="Read map file FILE and rerun traces")
 p.add_argument("--cl-device", dest="cl_device", metavar="PLATFORM,DEVICE", help="Run binary on PLATFORM,DEVICE")
 p.add_argument("--cl-cmdline", dest="cl_cmdline", metavar="TEMPLATE", help="Command template for OpenCL device selection")
+p.add_argument("--mtcpulimit", dest="mtcpulimit", help="Multiply CPU limit by this number (usually max. number of threads)", default=1,type=int)
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
@@ -398,7 +399,7 @@ if args.retrace:
 if args.measure_energy:
     overlays.add_overlay(rspecs, overlays.MeasureEnergyOverlay)
 
-rl = load_rlimits(l)
+rl = load_rlimits(l, args.mtcpulimit)
 
 for r in rspecs:
     r.set_rlimit(rl)
