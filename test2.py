@@ -22,6 +22,7 @@ import logproc
 import overlays
 import config
 import core
+import signal
 
 if os.name != "nt":
     import resource
@@ -46,8 +47,8 @@ def load_rlimits(lo, mt = 1):
     x = core.RLimit()
     rlimit_cpu = lo.config.get_var("rlimit.cpu", None)
     if rlimit_cpu is not None:        
-        log.info('Setting RLIMIT_CPU to %s' % (rlimit_cpu*mt,))
-        x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu*mt), int(rlimit_cpu*mt)))
+        log.info('Setting RLIMIT_CPU to %s' % (int(rlimit_cpu)*mt,))
+        x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu)*mt, int(rlimit_cpu)*mt))
 
     return x
 
@@ -151,6 +152,18 @@ def do_perf(args, rspecs):
                 log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, xid_c, run, p['time_ns'], x))
                 run += 1
             else:
+                if x.retval == -signal.SIGKILL or (x.retval == 256-signal.SIGKILL):
+                    # 255 - signal.SIGKILL will be when measure_energy is on for example
+                    if run == 0:
+                        log.log(FAIL_LEVEL, "%s %s: killed" % (rsid, runid2))
+                        # first run failed, don't continue when killed out of time.
+                        log.log(FAIL_LEVEL, "MISSING PERF %s" % (rsid,))
+
+                        if args.fail_fast:
+                            sys.exit(1)
+                            
+                        break
+                    
                 if repeat < 3:
                     log.log(FAIL_LEVEL, "%s %s: failed, re-running: %s" % (rsid, runid2, x))
                     repeat += 1
@@ -166,7 +179,8 @@ def do_perf(args, rspecs):
 
         if run > 0:
             log.log(TASK_COMPLETE_LEVEL, "%s PERF %d/%d/%d" % (rsid, run, repeat, args.repeat))
-
+        
+            
 
 def check_rspecs(rspecs):
     checks = []
