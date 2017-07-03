@@ -31,6 +31,8 @@ def process_instr(name, v):
         return v
     elif "intel-rapl" in name:        
         return v
+    elif "gpu_memory_" in name:
+        return v
     else:
         assert False, name
 
