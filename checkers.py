@@ -61,6 +61,39 @@ class DiffChecker(Checker):
             run.check_ok = True
         return True
 
+class NumDiffChecker(Checker):
+    def __init__(self, file1, gold, options=None):
+        self.file1 = file1
+        self.gold = gold
+        self.options = [] if options is None else options
+        
+    def get_input_files(self):
+        return [self.gold]
+
+    def check(self, run):
+        if not run.run_ok:
+            log.error("Cannot check failed run %s" % (run))
+            return False
+
+        args = run.get_tmp_files([self.file1, self.gold])
+
+        if os.name != "nt":
+        
+            x = Run({}, "numdiff", [(x, AT_OPAQUE) for x in (["-q"]  + self.options + args)])
+            if not x.run():
+                log.info("numdiff %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
+                return False
+
+            run.check_ok = True   
+        else:
+            x = Run({}, "numdiff.exe", [(x, AT_OPAQUE) for x in (self.options + self.args)])
+            if not x.run():
+                log.info("numdiff.exe  %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
+                return False
+
+            run.check_ok = True
+        return True
+
 class REChecker(Checker):
     def __init__(self, rexp):
         self.re = re.compile(rexp, re.MULTILINE)
