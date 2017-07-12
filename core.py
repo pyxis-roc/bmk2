@@ -108,6 +108,13 @@ def strip_repeated_lines(buf, min_repeat = 2, msg = '<< previous line repeated {
 
     return y.getvalue()
 
+def run_command_system(cmd):
+    rv = os.system(" ".join(cmd))
+    if rv != 0:
+            log.error("Execute (system) failed (%d): " % (rv,) + " ".join(cmd))
+
+    return (rv, "", "")
+    
 
 def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     output = None
@@ -335,7 +342,11 @@ class Run(object):
         run_env = os.environ.copy() # do this at init time instead of runtime?
         run_env.update(self.env)
 
-        self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=run_env, popen_args = self.popen_args)
+        # Hack because popen doesn't like to call batch files which call windows bash
+        if "numdiff.bat" in self.cmd_line:
+            self.retval, self.stdout, self.stderr = run_command_system(self.cmd_line)
+        else:
+            self.retval, self.stdout, self.stderr = run_command(self.cmd_line, env=run_env, popen_args = self.popen_args)
         self.run_ok = self.retval == 0
 
         return self.run_ok

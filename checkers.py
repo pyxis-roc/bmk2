@@ -86,9 +86,26 @@ class NumDiffChecker(Checker):
 
             run.check_ok = True   
         else:
-            x = Run({}, "numdiff.exe", [(x, AT_OPAQUE) for x in (self.options + self.args)])
+
+            # Here we go through bash for windows because numdiff isn't on windows.
+
+            # To get a properly cased filed path (required for bash)
+            # to install for python2.7:
+            # pip install pypiwin32
+            import win32api
+            args = [win32api.GetLongPathName(win32api.GetShortPathName(x)) for x in args]
+
+            # Now replace drive to use bash on windows format. e.g. c: gets replaced to /mnt/c/
+            # and \ gets replaced with /
+            def windows_drive_to_bash(p):
+                drive = p[0].lower()
+                return "/mnt/" + drive + p[2:]
+                
+            args = [windows_drive_to_bash(x.replace("\\", "/")) for x in args]
+            
+            x = Run({}, "numdiff.bat", [(x, AT_OPAQUE) for x in (self.options + args)])
             if not x.run():
-                log.info("numdiff.exe  %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
+                log.info("numdiff.bat  %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
                 return False
 
             run.check_ok = True
