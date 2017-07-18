@@ -109,9 +109,9 @@ def strip_repeated_lines(buf, min_repeat = 2, msg = '<< previous line repeated {
     return y.getvalue()
 
 def run_command_system(cmd):
-    rv = os.system(" ".join(cmd))
+    rv = os.system(" ".join(cmd) + "> NUL")
     if rv != 0:
-            log.error("Execute (system) failed (%d): " % (rv,) + " ".join(cmd))
+        log.error("Execute (system) failed (%d): " % (rv,) + " ".join(cmd))
 
     return (rv, "", "")
     

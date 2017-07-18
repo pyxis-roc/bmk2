@@ -152,7 +152,7 @@ def do_perf(args, rspecs):
                 log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, xid_c, run, p['time_ns'], x))
                 run += 1
             else:
-                if x.retval == -signal.SIGKILL or (x.retval == 256-signal.SIGKILL):
+                if os.name != "nt" and (x.retval == -signal.SIGKILL or (x.retval == 256-signal.SIGKILL)):   #Tyler: not sure what to do for Windows here...
                     # 255 - signal.SIGKILL will be when measure_energy is on for example
                     if run == 0:
                         log.log(FAIL_LEVEL, "%s %s: killed" % (rsid, runid2))
