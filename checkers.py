@@ -79,9 +79,9 @@ class NumDiffChecker(Checker):
 
         if os.name != "nt":
         
-            x = Run({}, "numdiff", [(x, AT_OPAQUE) for x in (["-q"]  + self.options + args)])
+            x = Run({}, "numdiff.py", [(x, AT_OPAQUE) for x in (["-q"]  + self.options + args)])
             if not x.run():
-                log.info("numdiff %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
+                log.info("numdiff.py %s '%s' '%s'" % tuple([" ".join(self.options)] + args))
                 return False
 
             run.check_ok = True   

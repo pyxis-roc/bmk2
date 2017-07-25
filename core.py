@@ -109,6 +109,8 @@ def strip_repeated_lines(buf, min_repeat = 2, msg = '<< previous line repeated {
     return y.getvalue()
 
 def run_command_system(cmd):
+    cmd.append(os.environ['BMK2_APP'])
+    cmd.append(os.environ['BMK2_INPUT'])
     rv = os.system(" ".join(cmd) + "> NUL")
     if rv != 0:
         log.error("Execute (system) failed (%d): " % (rv,) + " ".join(cmd))
@@ -342,6 +344,12 @@ class Run(object):
         run_env = os.environ.copy() # do this at init time instead of runtime?
         run_env.update(self.env)
 
+        # grabbing env from earlier command so that numdiff checker can use it next
+        if 'BMK2_INPUTID' in self.env:
+            os.environ['BMK2_INPUT'] = self.env['BMK2_INPUTID']
+        if 'BMK2_BINID' in self.env:
+            os.environ['BMK2_APP'] = self.env["BMK2_BINID"].replace('/', '-') # Don't like / in file names
+        
         # Hack because popen doesn't like to call batch files which call windows bash
         if "numdiff.bat" in self.cmd_line:
             self.retval, self.stdout, self.stderr = run_command_system(self.cmd_line)
