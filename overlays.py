@@ -134,7 +134,8 @@ class CLDeviceOverlay(Overlay):
         self.cmdline = cmdline_template.format(platform = cl_platform, device = cl_device).split(" ")
 
     def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
-        return super(CLDeviceOverlay, self).overlay(run, env, cmdline + self.cmdline, inherit_tmpfiles, {})
+        # Made sure graph is still final arg
+        return super(CLDeviceOverlay, self).overlay(run, env, cmdline[:-1] + self.cmdline + [cmdline[-1]], inherit_tmpfiles, {})
 
 class Bmk2RTEnvOverlay(Overlay):
     def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
