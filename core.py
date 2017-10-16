@@ -122,36 +122,17 @@ def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     output = None
     error = None
     
-    stdouth = subprocess.PIPE if stdout else None
-    stderrh = subprocess.PIPE if stderr else None
-
-    fname_stdout = None
-    fname_stderr = None
-
-    if os.name == "nt":
-        #stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
-        #stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stdout" + self.bin_id, dir=self.tmpdir)
-        stdouth, fname_stdout = tempfile.mkstemp(prefix="tmp-stdout")
-        stderrh, fname_stderr = tempfile.mkstemp(prefix="tmp-stderr")
-    
+    stdouth = subprocess.PIPE
+    stderrh = subprocess.PIPE
+	
     try:
+		#Things seem to run more reliably on windows if we add this.
+        if os.name == "nt":
+			popen_args["shell"] = True
+			
         proc = subprocess.Popen(cmd, stdout=stdouth, stderr=stderrh, env = env, **popen_args)
         output, error = proc.communicate()
-        
-        if fname_stdout != None:
-            os.close(stdouth)
-            tmp_f = open(fname_stdout)
-            output = tmp_f.read()
-            tmp_f.close()
-            os.remove(fname_stdout)
-
-        if fname_stderr != None:
-            os.close(stderrh)
-            tmp_f = open(fname_stderr)
-            error = tmp_f.read()
-            tmp_f.close()
-            os.remove(fname_stderr)
-
+		
         if proc.returncode != 0:
             log.error("Execute failed (%d): " % (proc.returncode,) + " ".join(cmd))
             rv = proc.returncode
