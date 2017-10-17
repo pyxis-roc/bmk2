@@ -42,13 +42,19 @@ class PSConfig(object):
         if cfg is None:
             self.cfg = autolocate_config()
 
-        self._cfg = ConfigParser.SafeConfigParser()
+        self._cfg = ConfigParser.SafeConfigParser(allow_no_value=True)
         
         if self.cfg:
             self._cfg.readfp(open(self.cfg, "r"))
         else:
             self._cfg.add_section('bmk2ps')
             self._cfg.set('bmk2ps', 'ver', '2')
+            self._cfg.add_section('data')
+            self._cfg.set('data', '# key=binid,input')
+            self._cfg.add_section('import')
+            self._cfg.set('import', '# binid_decompose=re')
+            self._cfg.set('import', '# average=field1,field2')
+
 
         self._key = None
         self._binid_re = None
