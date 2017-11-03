@@ -146,17 +146,19 @@ ocsv = csv.DictWriter(open(args.output, "w"), fieldnames)
 ocsv.writeheader()
 ocsv.writerows(rows)
 
+logfiles = " ".join(args.input)
+
 if len(rows) == 0:
-    print >>sys.stderr, "WARNING: Log file did not contain perf numbers!"
+    print >>sys.stderr, "WARNING: Log files (%s) did not contain perf numbers!" % (logfiles,)
     sys.exit(1)
 
 if total_time is not None:
     print >>sys.stderr, "Total time for experiment (h:m:s)", total_time
 else:
     if END_DATE is None:
-        print >>sys.stderr, "WARNING: no DATE END found, log file was probably incomplete."
+        print >>sys.stderr, "%s: WARNING: no DATE END found, log file (%s) was probably incomplete." % (args.logfiles,)
         sys.exit(1)
     else:
-        print >>sys.stderr, "WARNING: unable to calculate total time for experiment, possibly malformed logfile!"
+        print >>sys.stderr, "WARNING: unable to calculate total time for experiment, possibly malformed logfiles (%s)!" % (args.logfiles,)
         # do not return an error?
         sys.exit(1)
