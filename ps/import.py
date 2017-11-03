@@ -16,6 +16,24 @@ import argparse
 import psconfig
 import pandas as pd
 import re
+import ci
+import math
+
+def parse_keyvalue(keyvalue):
+    out = {}
+
+    if keyvalue:
+        for kv in keyvalue:
+            p = kv.index("=")
+            k = kv[:p]
+            v = kv[p+1:]
+
+            if k in out:
+                print >>sys.stderr, "WARNING: Duplicate variable '%s', overwriting '%s' with '%s'" % (k, out[k], v)
+
+            out[k] = v
+
+    return out
 
 def check_raw_data(raw_table, row_id = []):
     rdtable = raw_table
@@ -63,6 +81,10 @@ def average_data(key, raw_table, fields_to_avg):
                 out[c + '_sd'] = [group[c].std()]
                 out[c + '_count'] = [len(group)]
                 out[c + '_sum'] = [group[c].sum()]
+
+                t1 = [ci.critlevel(x, 95) for x in out[c + '_count']]
+                se = [stdev / math.sqrt(n) for stdev, n in zip(out[c + '_sd'], out[c + '_count'])]
+                out[c + '_ci95'] = [tt1 * sse for tt1, sse in zip(t1, se)]
             
         return pd.DataFrame(out)
 
@@ -86,6 +108,7 @@ parser.add_argument("--nc", dest="no_config", action="store_true", default=False
 parser.add_argument("-r", dest="raw", action="append", help="Incorporate other raw data", default=[])
 parser.add_argument("-o", dest="output", metavar="FILE", 
                     default="/dev/stdout", help="Output file")
+parser.add_argument("--kv", action="append", help="Add varname=value columns to output")
 
 args = parser.parse_args()
 
@@ -126,6 +149,11 @@ if check_raw_data(t, args.id_fields):
         avg_fields += args.avg_fields
 
     x = average_data(key, t, avg_fields)
+
+    kv = parse_keyvalue(args.kv)
+    for k, v in kv.items():
+        x[k] = v
+
     x.to_csv(args.output, reset_index=True)
     if len(x) == 0:
         print >>sys.stderr, "WARNING: No records were imported!"

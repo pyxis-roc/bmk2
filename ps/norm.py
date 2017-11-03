@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser(description="Normalize performance data by join
 parser.add_argument("base", help="Base file")
 parser.add_argument("input", help="Input file")
 parser.add_argument("-m", dest="metric", help="Metric to normalize")
+parser.add_argument("--normci", dest="normci", help="Normalize CI field to metric")
 parser.add_argument("--im", dest="inp_metric", help="Metric in input")
 parser.add_argument("--bm", dest="base_metric", help="Metric in base")
 parser.add_argument("-k", dest="key", action="append", default=[])
@@ -78,4 +79,8 @@ if bm not in t.columns:
 #print b[args.key + [args.metric] + args.right_keys]
 m = t.merge(b[args.key + [bm] + args.right_keys], 'left', on=args.key, suffixes=('', args.right_suffix))
 m[rm + args.suffix] = m[im] / m[bm + rsx]
+
+if args.normci:
+    m[args.normci + args.suffix] = m[args.normci] / m[bm + rsx] # yes, dividing by average
+
 m.to_csv(args.output,index=False)
