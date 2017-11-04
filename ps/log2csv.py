@@ -20,6 +20,25 @@ import bmk2.collect
 import psconfig
 import os
 
+def fix_xid(record, fixed_xids):
+    import zlib
+
+    xid = record['xid']
+    p = xid.find(".")
+    if p == -1: return  # not in format we expect, return
+    if xid[p-6:p-4] == "00" and len(xid) > 10: return # already fixed
+
+    if xid in fixed_xids:
+        record['xid'] = fixed_xids[xid]
+        return
+    
+    discriminator = "%s|%s" % (record['time_ns'], record['cmdline'])
+    val = str(zlib.adler32(discriminator) & 0xffffffff)
+    if len(val) < 4: val = val + "0" * (4 - len(val))
+
+    record['xid'] = record['xid'][:p] + "11" + val[:4] + record['xid'][p:]
+    fixed_xids[xid] = record['xid']
+    
 def process_instr(name, v):
     if name == "ATOMICS":
         n = v.split()
@@ -44,6 +63,8 @@ TIME_FMT = "%Y-%m-%d %H:%M:%S"
 parser = argparse.ArgumentParser(description="Extract performance date from a log file to a CSV")
 
 parser.add_argument("input", nargs="+", help="Input file")
+
+parser.add_argument("--fix-xid", action="store_true", help="Deterministically extend xid from old bmk2 versions to avoid collisions")
 
 parser.add_argument("-x", dest="experiment", metavar="FILE", help="Experiment name")
 
@@ -77,6 +98,7 @@ instr = {}
 rows = []
 total_time = None
 add_keys = set()
+fixed_xids = {}
 for i in args.input:
     basepath, collogs = bmk2.collect.build_collect_list(i) # TODO: avoid this 2-time parsing ...
 
@@ -108,6 +130,9 @@ for i in args.input:
             out['run'] = r.run
             out['time_ns'] = r.time_ns
             out['cmdline'] = r.cmdline
+
+            if args.fix_xid:
+                fix_xid(out, fixed_xids)
 
             if r.binid in collogs:
                 runid = r.xid + "." + r.run

@@ -23,6 +23,7 @@ import overlays
 import config
 import core
 import signal
+import random
 
 if os.name != "nt":
     import resource
@@ -94,12 +95,26 @@ def std_run(args, rs, runid):
         if x.stderr: log.info("%s STDERR\n" %(rsid) + squash_output(x.stderr, args.max_output) + "%s END\n" % (rsid))
         x.cleanup()
         return False, x
+
+def get_xid():
+    xid_base = str(time.time()) 
+
+    p = xid_base.index(".")
+
+    tmp = list(xid_base[:p]) # attempt 1 to make it a nonce after
+                             # collisions
+    random.shuffle(tmp)  
+
+    xid_base = xid_base[:p] + "00" + ''.join(tmp[:4]) + xid_base[p:]
+
+    return xid_base
     
 def do_run(args, rspecs):
     log.info("TASK run")
-
-    xid_base = str(time.time()) # this should really be a nonce
+    
+    xid_base = get_xid()
     runid = 0
+
     for rs in rspecs:
         rsid = rs.get_id()
         xid_c = xid_base + "." + str(runid)
@@ -121,7 +136,7 @@ def do_run(args, rspecs):
             
 def do_perf(args, rspecs):
     log.info("TASK perf")
-    xid_base = str(time.time()) # this should really be a nonce
+    xid_base = get_xid()
     runid = 0
 
     for rs in rspecs:
