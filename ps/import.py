@@ -154,7 +154,7 @@ if check_raw_data(t, args.id_fields):
     for k, v in kv.items():
         x[k] = v
 
-    x.to_csv(args.output, reset_index=True)
+    x.to_csv(args.output)
     if len(x) == 0:
         print >>sys.stderr, "WARNING: No records were imported!"
         sys.exit(1)
