@@ -66,6 +66,8 @@ parser.add_argument("input", nargs="+", help="Input file")
 
 parser.add_argument("--fix-xid", action="store_true", help="Deterministically extend xid from old bmk2 versions to avoid collisions")
 
+parser.add_argument("--add-missing", action="store_true", help="Add missing records")
+
 parser.add_argument("-x", dest="experiment", metavar="FILE", help="Experiment name")
 
 parser.add_argument("-o", dest="output", metavar="FILE", 
@@ -150,6 +152,19 @@ for i in args.input:
             rows.append(out)
         elif r.type == "MISSING":
             print >>sys.stderr, "MISSING", r.binid
+            if args.add_missing:
+                out = {}
+                if binid_re:
+                    m = binid_re.match(r.binid)
+                    out.update(m.groupdict())
+                else:
+                    out['binid'] = r.binid
+
+                # this is from the last record
+                if mix:
+                    out.update(mix)
+                
+                rows.append(out)
         elif r.type == "COLLECT":
             pass
         elif r.type == "INSTR":
