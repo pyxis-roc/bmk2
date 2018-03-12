@@ -82,10 +82,19 @@ def std_run(args, rs, runid):
 
         if rs.checker.check(x):
             log.log(PASS_LEVEL, "%s: %s" % (rsid, x))
+
+            if args.checker_verbose and hasattr(rs.checker, 'run'):
+                if rs.checker.run.stdout: log.info("%s STDOUT\n" %(rs.checker.run.runid) + squash_output(rs.checker.run.stdout, args.max_output))
+                if rs.checker.run.stderr: log.info("%s STDERR\n" %(rs.checker.run.runid) + squash_output(rs.checker.run.stderr, args.max_output))
+
             x.cleanup()
             return True, x
         else:
             log.log(FAIL_LEVEL, "%s %s: check failed: %s" % (rsid, runid, x))
+            if args.checker_verbose and hasattr(rs.checker, 'run'):
+                if rs.checker.run.stdout: log.info("%s STDOUT\n" %(rs.checker.run.runid) + squash_output(rs.checker.run.stdout, args.max_output))
+                if rs.checker.run.stderr: log.info("%s STDERR\n" %(rs.checker.run.runid) + squash_output(rs.checker.run.stderr, args.max_output))
+            
             if args.always_cleanup:
                 x.cleanup()
             return False, x
@@ -268,6 +277,7 @@ p.add_argument("--varcfg", dest="varconfigs", action="append", help="Variable co
 p.add_argument("--measure-energy", dest="measure_energy", action="store_true", help="Measure energy of run")
 p.add_argument("--read", dest="readlog", metavar="FILE", help="Read previous log")
 p.add_argument('-v', "--verbose", dest="verbose", action="store_true", help="Show stdout and stderr of executing programs", default=False)
+p.add_argument('--cv', "--checker-verbose", dest="checker_verbose", action="store_true", help="Show stdout and stderr of checker programs", default=False)
 p.add_argument('--missing', dest="missing", action="store_true", help="Select new/missing runspecs")
 
 p.add_argument("--retrace", dest="retrace", metavar="FILE", help="Read map file FILE and rerun traces")

@@ -148,6 +148,8 @@ class ExternalChecker(Checker):
             return False
         
         x = self.rs.run(run.runid + ".external-checker", inherit_tmpfiles = run.tmpfiles)
+        self.run = x
+        
         if not x.run_ok:
             return False
 
