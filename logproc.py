@@ -45,6 +45,15 @@ instr_re = re.compile("^INSTR ([^ ]+) (.*)$")
 pass_re = re.compile('^PASS ([^ :]+)(.+)$')
 gen_log_re = re.compile('^(INFO|DEBUG|ERROR)')
 
+runid_with_run_re = re.compile(r"^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$")
+def strip_run_from_runid(runid):
+    m = runid_with_run_re.match(runid) 
+    if m is not None:
+        return m.group(1)
+        
+    # did not contain runid
+    return runid
+
 def parse_log_file(logfile, extended = False):
     with open(logfile, "r") as f:
         for l in f:

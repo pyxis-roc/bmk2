@@ -101,6 +101,8 @@ rows = []
 total_time = None
 add_keys = set()
 fixed_xids = {}
+last_fail = None
+
 for i in args.input:
     basepath, collogs = bmk2.collect.build_collect_list(i) # TODO: avoid this 2-time parsing ...
 
@@ -160,7 +162,17 @@ for i in args.input:
                 else:
                     out['binid'] = r.binid
 
-                # this is from the last record
+                assert last_fail is not None, "MISSING %s but no failed runs" % (r,)
+                assert r.binid == last_fail.binid, "Different binids for last failed and MISSING"
+
+                out['xid'] = bmk2.logproc.strip_run_from_runid(last_fail.runid)
+                out['time_ns'] = None
+                out['cmdline'] = "MISSING %s" % (r.binid,)
+
+                if args.fix_xid:
+                    fix_xid(out, fixed_xids)
+
+                # this is from the last record seen
                 if mix:
                     out.update(mix)
                 
@@ -174,7 +186,7 @@ for i in args.input:
         elif r.type == "TASK_COMPLETE":            
             instr = {}
         elif r.type == "FAIL":
-            pass
+            last_fail = r
         else:
             assert False, r.type
 
