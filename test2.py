@@ -31,11 +31,15 @@ if os.name != "nt":
 import platform
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
+USING_TIMEOUT = False
 
 if hasattr(time, 'monotonic'):
     time_fn = time.monotonic
 else:
     time_fn = time.time
+
+def using_timeout():
+    return USING_TIMEOUT
 
 def log_env():
     interesting = ['CUDA_VISIBLE_DEVICES']
@@ -50,6 +54,7 @@ def load_rlimits(lo, mt = 1):
     if rlimit_cpu is not None:        
         log.info('Setting RLIMIT_CPU to %s' % (int(rlimit_cpu)*mt,))
         x.setrlimit(resource.RLIMIT_CPU, (int(rlimit_cpu)*mt, int(rlimit_cpu)*mt))
+        x.mt = mt
 
     return x
 
@@ -148,6 +153,13 @@ def do_perf(args, rspecs):
     xid_base = get_xid()
     runid = 0
 
+    killed_retcodes = [-signal.SIGKILL,  # run directly
+                       256-signal.SIGKILL, # run through measure_energy
+    ]
+
+    if using_timeout():
+        killed_retcodes.append(128+signal.SIGKILL) # timeout
+
     for rs in rspecs:
         rsid = rs.get_id()
         run = 0
@@ -176,8 +188,7 @@ def do_perf(args, rspecs):
                 log.log(PERF_LEVEL, "%s %s %s %s %s" % (rsid, xid_c, run, p['time_ns'], x))
                 run += 1
             else:
-                if os.name != "nt" and (x.retval == -signal.SIGKILL or (x.retval == 256-signal.SIGKILL)):   #Tyler: not sure what to do for Windows here...
-                    # 255 - signal.SIGKILL will be when measure_energy is on for example
+                if os.name != "nt" and (x.retval in killed_retcodes):   #Tyler: not sure what to do for Windows here...
                     if run == 0:
                         log.log(FAIL_LEVEL, "%s %s: killed" % (rsid, runid2))
                         # first run failed, don't continue when killed out of time.
@@ -284,6 +295,8 @@ p.add_argument("--retrace", dest="retrace", metavar="FILE", help="Read map file 
 p.add_argument("--cl-device", dest="cl_device", metavar="PLATFORM,DEVICE", help="Run binary on PLATFORM,DEVICE")
 p.add_argument("--cl-cmdline", dest="cl_cmdline", metavar="TEMPLATE", help="Command template for OpenCL device selection")
 p.add_argument("--mtcpulimit", dest="mtcpulimit", help="Multiply CPU limit by this number (usually max. number of threads)", default=1,type=int)
+p.add_argument("--no-timeout", dest="timeout", help="Use only rlimit.CPU, not timeout", action="store_false")
+
 
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
@@ -442,6 +455,11 @@ rl = load_rlimits(l, args.mtcpulimit)
 
 for r in rspecs:
     r.set_rlimit(rl)
+
+if resource.RLIMIT_CPU in rl.limits and core.USE_TIMEOUT and args.timeout:
+    USING_TIMEOUT = True # ugly
+    timeout_s = rl.limits[resource.RLIMIT_CPU][0] / rl.mt # realtime
+    overlays.add_overlay(rspecs, overlays.TimeoutOverlay, timeout_s + 3) # the + 3 is to give rtlimit time to work before timeout kicks in
 
 if args.command == "list":
     prev_bid = None

@@ -35,6 +35,8 @@ AT_LOG = 6
 
 placeholder_re = re.compile(r'(@[A-Za-z0-9_]+)') # may need delimiters?
 
+USE_TIMEOUT = True # use the timeout overlay with rlimit.CPU on Unix-based systems
+
 def escape_for_filename(n):
     return n.replace("/", "_").replace(".", "").replace("\\","_")
     
@@ -126,9 +128,9 @@ def run_command(cmd, stdout = True, stderr = True, env = None, popen_args = {}):
     stderrh = subprocess.PIPE
 	
     try:
-		#Things seem to run more reliably on windows if we add this.
+        #Things seem to run more reliably on windows if we add this.
         if os.name == "nt":
-			popen_args["shell"] = True
+            popen_args["shell"] = True
 			
         proc = subprocess.Popen(cmd, stdout=stdouth, stderr=stderrh, env = env, **popen_args)
         output, error = proc.communicate()
@@ -187,6 +189,7 @@ class Properties(object):
 class RLimit(object):
     def __init__(self):
         self.limits = {}
+        self.mt = 1 # stores multithreaded info, but RLIMIT_CPU must be set to limit*mt
 
     def setrlimit(self, lim, val):
         self.limits[lim] = val
@@ -442,10 +445,11 @@ class BasicRunSpec(object):
         assert len(self.errors) == 0
 
         x = Run(self.env, self.binary, self.args, self)
-        if self.rlimit and os.name != "nt":
-            x.set_popen_args('preexec_fn', self.rlimit.set)
-        if os.name == "nt":
-            log.info("Warning: rlimit not supported on Windows OS")
+        if self.rlimit:            
+            if os.name != "nt":
+                x.set_popen_args('preexec_fn', self.rlimit.set)
+            elif os.name == "nt":
+                log.info("Warning: rlimit not supported on Windows OS")
 
         x.set_overlays(self.overlays)
         x.set_tmpdir(self.tmpdir)

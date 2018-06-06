@@ -193,6 +193,18 @@ class MeasureEnergyOverlay(Overlay):
         return super(MeasureEnergyOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
 
 
+class TimeoutOverlay(Overlay):
+    def __init__(self, timeout_realtime_seconds, signal = 'KILL'):
+        # from Unix core utils, realtime
+        args = [(x, core.AT_OPAQUE) for x in ["-s", signal, 
+                                              "{timeout}s".format(timeout=timeout_realtime_seconds)]]
+
+        super(TimeoutOverlay, self).__init__(binary="timeout", args=args)
+
+    def overlay(self, run, env, cmdline, inherit_tmpfiles = None):
+        return super(TimeoutOverlay, self).overlay(run, env, cmdline, inherit_tmpfiles)
+
+
 def add_overlay(rspecs, overlay, *args, **kwargs):
     for r in rspecs:
         r.add_overlay(overlay(*args, **kwargs))
