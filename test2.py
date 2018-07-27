@@ -301,6 +301,7 @@ p.add_argument("--no-timeout", dest="timeout", help="Use only rlimit.CPU, not ti
 sp = p.add_subparsers(help="sub-command help", dest="command")
 plist = sp.add_parser('list', help="List runspecs")
 plist.add_argument('binputs', nargs='*', help="Limit to binaries and/or inputs")
+plist.add_argument('--in-only-fmt', action="store_true", help="In only format", default=False)
 plist.add_argument('--show-files', action="store_true", help="Limit to binaries and/or inputs", default=False)
 
 prun = sp.add_parser('run', help="Run binaries")
@@ -375,7 +376,7 @@ if args.only:
 
     if onlybinids.intersection(all_rsids) != onlybinids:
         log.error('Subset IDs did not match (possibly misspelt?): %s' % (onlybinids.difference(all_rsids)))
-        if args.binputs is None or len(args.binputs) == 0: 
+        if (args.binputs is None or len(args.binputs) == 0) and not args.bispec:  
             sys.exit(1) 
 
     onlybinids = onlybinids.intersection(all_rsids)
@@ -465,14 +466,22 @@ if args.command == "list":
     prev_bid = None
     for rs in rspecs:
         if rs.bid != prev_bid:
-            print rs.bid,
+            if args.in_only_fmt:
+                list_bin = rs.bid
+            else:
+                print rs.bid,
+
             prev_bid = rs.bid
             if rs.bid in l.config.disable_binaries:
                 print "\t** DISABLED **",
-            print
+            if not args.in_only_fmt: print
 
-        print "\t", rs.input_name
-        if args.show_files:
+        if args.in_only_fmt:
+            print list_bin + "/" + rs.input_name
+        else:
+            print "\t", rs.input_name
+
+        if not args.in_only_fmt and args.show_files:
             files = rs.get_input_files() +rs.checker.get_input_files()
             print "\t\t", " ".join(files)
 elif args.command == "run":
