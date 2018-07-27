@@ -131,17 +131,28 @@ class HTMLize(Handler):
 
     def begin(self, logfile):
         self.lineno = 0
+
+        if args.no_css:
+            cssdata = "<link rel='stylesheet' type='text/css' href='summ.css' />"
+        else:
+            with open(os.path.join(os.path.dirname(__file__), 'summ.css')) as f:
+                cssdata = f.read()
+            
+            cssdata = "<style type='text/css'>" + cssdata + "</style>"
+
         print >>self.f, """<!DOCTYPE html>
 <html>
+<head>
 <title>{logfile}</title>
-<link rel='stylesheet' type='text/css' href='summ.css' />
+{cssdata}
+</head>
 <body>
 <h1>{logfile}</h1>
 <div id='container'>
 
 <div id='logcontents'>
 <h2>Log file contents</h2>
-<pre id='log'>""".format(logfile=logfile)
+<pre id='log'>""".format(logfile=logfile,cssdata=cssdata)
 
     def write_idx(self):
         print >>self.f, "<div id='index'><h2>Index</h2>"
@@ -385,6 +396,7 @@ parser = argparse.ArgumentParser(description="Summarize a bmk2 log")
 parser.add_argument("logfile", help="Log file")
 parser.add_argument("output", help="Output file")
 parser.add_argument("--no-diffs", help="Do not generate diff files", action="store_true")
+parser.add_argument("--no-css", help="Embed a link to CSS", action="store_true")
 
 args = parser.parse_args()
 
