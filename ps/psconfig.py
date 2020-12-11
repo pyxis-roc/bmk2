@@ -29,6 +29,9 @@ def autolocate_config(start = None, fn = "bmk2ps.cfg"):
         dn = os.path.normpath(os.path.join(d, ".."))
         dnp = os.stat(dn)
 
+        if d == dn: # usually "/"
+            return None
+        
         if dp.st_dev != dnp.st_dev:
             return None
 
